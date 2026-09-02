@@ -48,7 +48,7 @@ async def analyze(
 
         # 5. Semantic Scoring (Sentence Transformers on Worker Thread)
         sem_res = await asyncio.to_thread(semantic_score, r_json, j_json)
-        score_res = final_score(r_json, skill_res, sem_res)
+        score_res = final_score(r_json, skill_res, sem_res, j_json)
 
         # 6. LLM Review Prompt Helper (Safe with fallback)
         async def _review():
