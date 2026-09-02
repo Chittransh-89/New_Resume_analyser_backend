@@ -1,0 +1,16 @@
+fastapi==0.115.0
+uvicorn==0.48.0
+python-multipart==0.0.29
+python-dotenv==1.2.2
+openai==2.41.0
+google-generativeai==0.8.6
+# kimi/nvidia removed — now GEMINI 1.5 Flash (single model: config.LLM_MODEL)
+sentence-transformers==5.5.1
+torch==2.12.0
+scikit-learn==1.8.0
+pdfplumber==0.11.7
+httpx==0.28.1
+chromadb==1.5.9
+duckduckgo_search==4.5.0
+beautifulsoup4==4.15.0
+numpy==2.4.6
