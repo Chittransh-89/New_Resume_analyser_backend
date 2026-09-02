@@ -65,7 +65,7 @@
 |---|---|
 | **Framework** | FastAPI + Uvicorn |
 | **LLM** | Google Gemini 2.5 Flash (`google-genai` SDK) |
-| **Embeddings** | Sentence Transformers (`all-MiniLM-L6-v2`) |
+| **Embeddings** | Sentence Transformers (`intfloat/e5-base-v2`) |
 | **PDF Parsing** | PyMuPDF (primary) + pdfplumber (fallback) |
 | **Similarity** | scikit-learn (Cosine Similarity) |
 | **Language** | Python 3.11+ |
@@ -132,7 +132,7 @@ Edit `.env` with your credentials:
 ```env
 GOOGLE_API_KEY=your_gemini_api_key_here
 LLM_MODEL=gemini-2.5-flash
-EMBEDDING_MODEL=all-MiniLM-L6-v2
+EMBEDDING_MODEL=intfloat/e5-base-v2
 ```
 
 > 🔑 Get your free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
