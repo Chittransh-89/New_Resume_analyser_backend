@@ -3,3 +3,5 @@ __pycache__/
 discussion/
 MY_TRY/
 .venv/
+chroma_db
+chroma.sqlite3
