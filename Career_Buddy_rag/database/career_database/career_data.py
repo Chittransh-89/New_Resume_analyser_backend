@@ -1,0 +1,358 @@
+"""Comprehensive career data knowledge base."""
+
+CAREER_PATHS = {
+    # ── SOFTWARE & TECH ──
+    "frontend_developer": {
+        "title": "Frontend Developer",
+        "category": "Software Development",
+        "description": "Build user interfaces and interactive web applications using modern frameworks and technologies.",
+        "required_skills": {
+            "core": ["HTML5", "CSS3", "JavaScript (ES6+)"],
+            "frameworks": ["React.js", "Vue.js", "Angular", "Next.js", "Svelte"],
+            "styling": ["Tailwind CSS", "SASS/SCSS", "Styled Components", "CSS Modules"],
+            "tools": ["Git", "Webpack", "Vite", "npm/yarn", "Chrome DevTools"],
+            "testing": ["Jest", "React Testing Library", "Cypress", "Playwright"],
+            "concepts": ["Responsive Design", "Accessibility (a11y)", "Performance Optimization", "SEO Basics", "PWA"],
+        },
+        
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Learn HTML5 semantics", "Master CSS layouts (Flexbox, Grid)", "JavaScript fundamentals & DOM manipulation"]},
+            {"phase": "Intermediate (2-3 months)", "tasks": ["Learn React.js or Vue.js", "State management (Redux/Zustand/Pinia)", "API integration (REST, fetch/axios)", "Version control with Git"]},
+            {"phase": "Advanced (2-3 months)", "tasks": ["TypeScript", "Next.js/Nuxt.js (SSR/SSG)", "Testing (unit + e2e)", "Performance optimization", "CI/CD basics"]},
+            {"phase": "Professional (Ongoing)", "tasks": ["Build portfolio (5+ projects)", "Contribute to open source", "Learn design systems", "System design for frontend"]},
+        ],
+        "salary_range": {"india": "₹4-25 LPA", "us": "$60K-$150K", "remote": "$40K-$120K"},
+        "job_titles": ["Frontend Developer", "UI Developer", "React Developer", "Web Developer", "Frontend Engineer"],
+        "companies_hiring": ["Google", "Meta", "Amazon", "Flipkart", "Swiggy", "Razorpay", "Atlassian", "Startups"],
+        "certifications": ["Meta Frontend Developer (Coursera)", "freeCodeCamp Responsive Web Design", "AWS Cloud Practitioner"],
+        "difficulty": "Beginner Friendly",
+        "demand": "Very High",
+    },
+    "backend_developer": {
+        "title": "Backend Developer",
+        "category": "Software Development",
+        "description": "Design, build, and maintain server-side logic, databases, and APIs that power applications.",
+        "required_skills": {
+            "languages": ["Python", "Node.js", "Java", "Go", "Rust"],
+            "frameworks": ["Express.js", "Django", "FastAPI", "Spring Boot", "Flask"],
+            "databases": ["PostgreSQL", "MongoDB", "MySQL", "Redis", "Elasticsearch"],
+            "tools": ["Docker", "Git", "Postman", "Linux CLI", "Nginx"],
+            "concepts": ["REST API Design", "GraphQL", "Authentication (JWT/OAuth)", "Microservices", "Message Queues (RabbitMQ/Kafka)", "Caching Strategies"],
+            "cloud": ["AWS (EC2, S3, Lambda)", "Docker & Kubernetes", "CI/CD Pipelines"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Pick a language (Python/Node.js recommended)", "HTTP, REST API basics", "Basic CRUD operations"]},
+            {"phase": "Intermediate (2-3 months)", "tasks": ["Framework mastery (Express/Django/FastAPI)", "Database design & SQL", "Authentication & Authorization", "Error handling & logging"]},
+            {"phase": "Advanced (3-4 months)", "tasks": ["Docker & containerization", "Cloud deployment (AWS/GCP)", "Microservices architecture", "Message queues & caching", "Security best practices"]},
+            {"phase": "Professional (Ongoing)", "tasks": ["System design", "Performance tuning", "Monitoring & observability", "Open source contributions"]},
+        ],
+        "salary_range": {"india": "₹5-30 LPA", "us": "$70K-$160K", "remote": "$50K-$130K"},
+        "job_titles": ["Backend Developer", "API Developer", "Server-Side Engineer", "Platform Engineer"],
+        "companies_hiring": ["Google", "Amazon", "Microsoft", "Uber", "Stripe", "Zerodha", "PhonePe"],
+        "certifications": ["AWS Solutions Architect", "MongoDB Certified Developer", "Docker Certified Associate"],
+        "difficulty": "Intermediate",
+        "demand": "Very High",
+    },
+    "fullstack_developer": {
+        "title": "Full Stack Developer",
+        "category": "Software Development",
+        "description": "Handle both frontend and backend development, building complete web applications end-to-end.",
+        "required_skills": {
+            "frontend": ["React.js/Next.js", "HTML/CSS/JavaScript", "TypeScript", "Tailwind CSS"],
+            "backend": ["Node.js/Express or Python/Django", "REST APIs", "GraphQL"],
+            "database": ["PostgreSQL", "MongoDB", "Redis"],
+            "devops": ["Docker", "CI/CD", "Cloud (AWS/Vercel)", "Git"],
+            "concepts": ["System Design", "Security", "Performance", "Agile/Scrum"],
+        },
+        "roadmap": [
+            {"phase": "Frontend First (2-3 months)", "tasks": ["HTML, CSS, JavaScript mastery", "React.js + state management", "Build 3 frontend projects"]},
+            {"phase": "Backend (2-3 months)", "tasks": ["Node.js + Express or Python + FastAPI", "Database design", "API development", "Authentication"]},
+            {"phase": "Integration (1-2 months)", "tasks": ["Connect frontend to backend", "Build 2 full-stack projects", "Deployment (Vercel, Railway, AWS)"]},
+            {"phase": "Advanced (Ongoing)", "tasks": ["Docker, Kubernetes", "System design", "Performance optimization", "Build SaaS projects"]},
+        ],
+        "salary_range": {"india": "₹6-35 LPA", "us": "$80K-$170K", "remote": "$50K-$140K"},
+        "job_titles": ["Full Stack Developer", "Software Engineer", "Web Developer", "MERN/MEAN Stack Developer"],
+        "companies_hiring": ["Google", "Meta", "Amazon", "Startups (widely needed)"],
+        "certifications": ["The Odin Project (Free)", "Full Stack Open (Helsinki)", "Meta Full Stack Certificate"],
+        "difficulty": "Intermediate to Advanced",
+        "demand": "Extremely High",
+    },
+    "data_scientist": {
+        "title": "Data Scientist",
+        "category": "Data & AI",
+        "description": "Extract insights from data using statistics, machine learning, and analytical techniques to drive business decisions.",
+        "required_skills": {
+            "languages": ["Python", "R", "SQL"],
+            "libraries": ["Pandas", "NumPy", "Scikit-learn", "TensorFlow/PyTorch", "Matplotlib/Seaborn/Plotly"],
+            "concepts": ["Statistics & Probability", "Machine Learning", "Deep Learning", "NLP", "Computer Vision", "A/B Testing"],
+            "tools": ["Jupyter Notebook", "Git", "Docker", "Tableau/Power BI", "MLflow"],
+            "big_data": ["Spark", "Hadoop", "Airflow", "SQL Databases"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (2-3 months)", "tasks": ["Python programming", "Statistics & probability", "SQL for data analysis", "Pandas, NumPy basics"]},
+            {"phase": "Core ML (3-4 months)", "tasks": ["Supervised learning (Regression, Classification)", "Unsupervised learning (Clustering, PCA)", "Model evaluation & tuning", "Feature engineering"]},
+            {"phase": "Advanced (3-4 months)", "tasks": ["Deep Learning (CNNs, RNNs, Transformers)", "NLP or Computer Vision specialization", "MLOps basics", "Big data tools"]},
+            {"phase": "Professional (Ongoing)", "tasks": ["Kaggle competitions", "Research papers", "Domain expertise", "Build ML portfolio"]},
+        ],
+        "salary_range": {"india": "₹6-40 LPA", "us": "$90K-$180K", "remote": "$60K-$150K"},
+        "job_titles": ["Data Scientist", "ML Engineer", "Research Scientist", "AI Engineer", "Applied Scientist"],
+        "companies_hiring": ["Google", "Meta", "Amazon", "Microsoft", "Netflix", "Flipkart", "Fractal"],
+        "certifications": ["Andrew Ng's ML Course", "Google Data Analytics Certificate", "AWS ML Specialty"],
+        "difficulty": "Advanced",
+        "demand": "Very High",
+    },
+    "devops_engineer": {
+        "title": "DevOps Engineer",
+        "category": "Infrastructure & Cloud",
+        "description": "Bridge development and operations by automating infrastructure, deployments, and monitoring.",
+        "required_skills": {
+            "os": ["Linux (Ubuntu, CentOS)", "Shell Scripting (Bash)"],
+            "containers": ["Docker", "Kubernetes", "Helm"],
+            "ci_cd": ["Jenkins", "GitHub Actions", "GitLab CI", "ArgoCD"],
+            "cloud": ["AWS", "Azure", "GCP"],
+            "iac": ["Terraform", "Ansible", "CloudFormation", "Pulumi"],
+            "monitoring": ["Prometheus", "Grafana", "ELK Stack", "Datadog"],
+            "concepts": ["Networking", "Security", "High Availability", "Disaster Recovery"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Linux fundamentals", "Networking basics", "Shell scripting", "Git workflows"]},
+            {"phase": "Containers (2-3 months)", "tasks": ["Docker deep dive", "Kubernetes (pods, services, deployments)", "Container orchestration"]},
+            {"phase": "Cloud & IaC (2-3 months)", "tasks": ["AWS core services", "Terraform for infrastructure", "CI/CD pipeline setup"]},
+            {"phase": "Advanced (Ongoing)", "tasks": ["Monitoring & observability", "Security (DevSecOps)", "Service mesh (Istio)", "Site Reliability Engineering"]},
+        ],
+        "salary_range": {"india": "₹8-35 LPA", "us": "$90K-$170K", "remote": "$60K-$140K"},
+        "job_titles": ["DevOps Engineer", "SRE", "Cloud Engineer", "Platform Engineer", "Infrastructure Engineer"],
+        "companies_hiring": ["Amazon", "Google", "Microsoft", "Razorpay", "Hotstar", "Atlassian"],
+        "certifications": ["AWS Solutions Architect", "CKA (Kubernetes)", "Terraform Associate", "Docker Certified Associate"],
+        "difficulty": "Intermediate to Advanced",
+        "demand": "Very High",
+    },
+    "mobile_developer": {
+        "title": "Mobile App Developer",
+        "category": "Software Development",
+        "description": "Build native or cross-platform mobile applications for iOS and Android.",
+        "required_skills": {
+            "cross_platform": ["React Native", "Flutter (Dart)", "Kotlin Multiplatform"],
+            "native_android": ["Kotlin", "Jetpack Compose", "Android SDK"],
+            "native_ios": ["Swift", "SwiftUI", "UIKit", "Xcode"],
+            "tools": ["Git", "Firebase", "REST APIs", "App Store/Play Store deployment"],
+            "concepts": ["Mobile UI/UX", "State Management", "Offline Storage", "Push Notifications", "App Security"],
+        },
+        "roadmap": [
+            {"phase": "Choose Path (1 month)", "tasks": ["Decide: Native (Android/iOS) vs Cross-platform (Flutter/React Native)", "Set up development environment"]},
+            {"phase": "Core (2-3 months)", "tasks": ["Learn chosen framework", "Build 3 practice apps", "API integration", "State management"]},
+            {"phase": "Advanced (2-3 months)", "tasks": ["Firebase integration", "Push notifications", "Offline storage", "App performance optimization"]},
+            {"phase": "Publish (1 month)", "tasks": ["Build portfolio app", "Publish to Play Store/App Store", "Build 2 complete projects"]},
+        ],
+        "salary_range": {"india": "₹5-28 LPA", "us": "$75K-$160K", "remote": "$45K-$120K"},
+        "job_titles": ["Mobile Developer", "Android Developer", "iOS Developer", "Flutter Developer", "React Native Developer"],
+        "companies_hiring": ["Google", "Apple", "Meta", "Swiggy", "Zomato", "Paytm", "CRED"],
+        "certifications": ["Google Associate Android Developer", "Meta React Native Certificate", "Flutter Certification"],
+        "difficulty": "Intermediate",
+        "demand": "High",
+    },
+    "cybersecurity_analyst": {
+        "title": "Cybersecurity Analyst",
+        "category": "Security",
+        "description": "Protect organizations from cyber threats by monitoring, detecting, and responding to security incidents.",
+        "required_skills": {
+            "core": ["Network Security", "Cryptography", "Incident Response", "Vulnerability Assessment"],
+            "tools": ["Wireshark", "Burp Suite", "Nmap", "Metasploit", "SIEM (Splunk/QRadar)"],
+            "concepts": ["OWASP Top 10", "Penetration Testing", "SOC Operations", "Malware Analysis", "Compliance (ISO 27001, GDPR)"],
+            "programming": ["Python", "Bash", "PowerShell"],
+            "os": ["Linux", "Windows Server"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (2-3 months)", "tasks": ["Networking fundamentals (TCP/IP, DNS, HTTP)", "Linux & Windows administration", "Security fundamentals"]},
+            {"phase": "Core Security (3-4 months)", "tasks": ["Ethical hacking basics", "Web application security", "Network security monitoring", "Cryptography"]},
+            {"phase": "Specialization (3-4 months)", "tasks": ["Penetration testing OR SOC analyst track", "SIEM tools", "Incident response", "Malware analysis basics"]},
+            {"phase": "Certification (Ongoing)", "tasks": ["Get CompTIA Security+", "Then CEH or OSCP", "Bug bounty programs", "CTF competitions"]},
+        ],
+        "salary_range": {"india": "₹5-30 LPA", "us": "$70K-$150K", "remote": "$50K-$120K"},
+        "job_titles": ["Security Analyst", "Penetration Tester", "SOC Analyst", "Security Engineer", "Ethical Hacker"],
+        "companies_hiring": ["Deloitte", "EY", "PwC", "CrowdStrike", "Palo Alto Networks", "TCS", "Infosys"],
+        "certifications": ["CompTIA Security+", "CEH", "OSCP", "CISSP", "Google Cybersecurity Certificate"],
+        "difficulty": "Intermediate to Advanced",
+        "demand": "Very High",
+    },
+    "ui_ux_designer": {
+        "title": "UI/UX Designer",
+        "category": "Design",
+        "description": "Design intuitive, user-centered digital experiences through research, wireframing, and visual design.",
+        "required_skills": {
+            "design_tools": ["Figma", "Adobe XD", "Sketch", "Adobe Illustrator", "Framer"],
+            "ux_skills": ["User Research", "Wireframing", "Prototyping", "Usability Testing", "Information Architecture"],
+            "ui_skills": ["Visual Design", "Typography", "Color Theory", "Design Systems", "Responsive Design"],
+            "concepts": ["Accessibility", "Interaction Design", "Design Thinking", "Agile/Scrum"],
+            "bonus": ["HTML/CSS basics", "Motion Design (After Effects)", "Copywriting"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Learn design principles", "Master Figma", "Study good designs (Dribbble, Behance)", "Typography & color theory"]},
+            {"phase": "UX (2-3 months)", "tasks": ["User research methods", "Wireframing & prototyping", "Information architecture", "Usability testing"]},
+            {"phase": "UI (2-3 months)", "tasks": ["Visual design mastery", "Design systems", "Responsive & adaptive design", "Micro-interactions"]},
+            {"phase": "Portfolio (1-2 months)", "tasks": ["3-5 case studies", "Personal website", "Dribbble/Behance presence", "Network with designers"]},
+        ],
+        "salary_range": {"india": "₹4-25 LPA", "us": "$65K-$140K", "remote": "$40K-$110K"},
+        "job_titles": ["UI/UX Designer", "Product Designer", "UX Researcher", "Visual Designer", "Interaction Designer"],
+        "companies_hiring": ["Google", "Apple", "Figma", "Swiggy", "Razorpay", "CRED", "Design agencies"],
+        "certifications": ["Google UX Design Certificate", "Interaction Design Foundation", "Nielsen Norman Group UX Certification"],
+        "difficulty": "Beginner Friendly",
+        "demand": "High",
+    },
+    "cloud_architect": {
+        "title": "Cloud Architect",
+        "category": "Infrastructure & Cloud",
+        "description": "Design and implement cloud infrastructure solutions for scalability, security, and efficiency.",
+        "required_skills": {
+            "cloud_platforms": ["AWS", "Azure", "Google Cloud Platform"],
+            "services": ["Compute (EC2, Lambda)", "Storage (S3, EBS)", "Database (RDS, DynamoDB)", "Networking (VPC, CloudFront)"],
+            "iac": ["Terraform", "CloudFormation", "Pulumi"],
+            "containers": ["Docker", "Kubernetes", "ECS/EKS"],
+            "concepts": ["Microservices Architecture", "Serverless", "Cost Optimization", "Security Best Practices", "High Availability", "Disaster Recovery"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (2-3 months)", "tasks": ["Cloud fundamentals", "Networking basics", "Linux administration", "One cloud platform (AWS recommended)"]},
+            {"phase": "Core Services (3-4 months)", "tasks": ["Compute, storage, database services", "IAM & security", "VPC & networking", "Serverless (Lambda)"]},
+            {"phase": "Architecture (3-4 months)", "tasks": ["Design patterns (Well-Architected Framework)", "Multi-tier architectures", "Cost optimization", "Terraform"]},
+            {"phase": "Expert (Ongoing)", "tasks": ["Multi-cloud strategies", "Advanced security", "Solutions architecture certification", "Real-world projects"]},
+        ],
+        "salary_range": {"india": "₹12-50 LPA", "us": "$120K-$200K", "remote": "$80K-$160K"},
+        "job_titles": ["Cloud Architect", "Solutions Architect", "Cloud Engineer", "Infrastructure Architect"],
+        "companies_hiring": ["AWS", "Microsoft", "Google", "Accenture", "TCS", "Infosys", "Deloitte"],
+        "certifications": ["AWS Solutions Architect Associate/Professional", "Azure Solutions Architect", "GCP Professional Cloud Architect"],
+        "difficulty": "Advanced",
+        "demand": "Very High",
+    },
+    "data_analyst": {
+        "title": "Data Analyst",
+        "category": "Data & AI",
+        "description": "Analyze data to find trends, create visualizations, and provide actionable insights for business decisions.",
+        "required_skills": {
+            "core": ["SQL", "Excel (Advanced)", "Statistics"],
+            "tools": ["Tableau", "Power BI", "Google Data Studio"],
+            "programming": ["Python (Pandas, Matplotlib)", "R (optional)"],
+            "concepts": ["Data Cleaning", "EDA (Exploratory Data Analysis)", "Dashboard Design", "A/B Testing", "Business Intelligence"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Excel advanced functions", "SQL fundamentals", "Basic statistics"]},
+            {"phase": "Analysis (2-3 months)", "tasks": ["Python + Pandas", "Data cleaning techniques", "EDA", "SQL advanced queries"]},
+            {"phase": "Visualization (1-2 months)", "tasks": ["Tableau or Power BI", "Dashboard design", "Storytelling with data"]},
+            {"phase": "Professional (Ongoing)", "tasks": ["Portfolio projects (3-5)", "Domain knowledge", "Kaggle datasets", "Business case studies"]},
+        ],
+        "salary_range": {"india": "₹3-15 LPA", "us": "$55K-$100K", "remote": "$35K-$80K"},
+        "job_titles": ["Data Analyst", "Business Analyst", "BI Analyst", "Analytics Engineer", "Reporting Analyst"],
+        "companies_hiring": ["Amazon", "Google", "Deloitte", "Accenture", "Flipkart", "Swiggy", "Any large company"],
+        "certifications": ["Google Data Analytics Certificate", "IBM Data Analyst Certificate", "Tableau Desktop Specialist"],
+        "difficulty": "Beginner Friendly",
+        "demand": "High",
+    },
+    "ai_ml_engineer": {
+        "title": "AI/ML Engineer",
+        "category": "Data & AI",
+        "description": "Build, deploy, and maintain machine learning models and AI systems in production environments.",
+        "required_skills": {
+            "languages": ["Python", "C++ (optional)"],
+            "ml_frameworks": ["TensorFlow", "PyTorch", "Scikit-learn", "Hugging Face Transformers"],
+            "mlops": ["MLflow", "Docker", "Kubernetes", "Airflow", "Feature Stores"],
+            "concepts": ["Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning", "GenAI (LLMs, RAG, Fine-tuning)"],
+            "tools": ["Jupyter", "Git", "DVC", "Weights & Biases", "AWS SageMaker"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (2-3 months)", "tasks": ["Python + math (Linear Algebra, Calculus, Stats)", "Classical ML algorithms", "Scikit-learn"]},
+            {"phase": "Deep Learning (3-4 months)", "tasks": ["Neural networks", "PyTorch or TensorFlow", "CNNs, RNNs, Transformers", "NLP or CV specialization"]},
+            {"phase": "GenAI (2-3 months)", "tasks": ["LLMs & prompt engineering", "RAG systems", "Fine-tuning", "LangChain/LlamaIndex"]},
+            {"phase": "MLOps (2-3 months)", "tasks": ["Model deployment", "Docker + Kubernetes", "CI/CD for ML", "Monitoring in production"]},
+        ],
+        "salary_range": {"india": "₹8-50 LPA", "us": "$100K-$200K", "remote": "$70K-$160K"},
+        "job_titles": ["ML Engineer", "AI Engineer", "Deep Learning Engineer", "NLP Engineer", "Computer Vision Engineer"],
+        "companies_hiring": ["Google", "OpenAI", "Meta", "Microsoft", "NVIDIA", "Amazon", "Startups"],
+        "certifications": ["Deep Learning Specialization (Andrew Ng)", "TensorFlow Developer Certificate", "AWS ML Specialty"],
+        "difficulty": "Advanced",
+        "demand": "Extremely High",
+    },
+    "product_manager": {
+        "title": "Product Manager",
+        "category": "Management & Strategy",
+        "description": "Define product vision, strategy, and roadmap while working with engineering, design, and business teams.",
+        "required_skills": {
+            "core": ["Product Strategy", "User Research", "Data Analysis", "Roadmap Planning", "Prioritization (RICE/MoSCoW)"],
+            "technical": ["SQL basics", "Analytics tools", "API understanding", "Technical communication"],
+            "soft_skills": ["Leadership", "Communication", "Stakeholder Management", "Problem Solving", "Decision Making"],
+            "tools": ["Jira", "Notion", "Figma (basics)", "Amplitude/Mixpanel", "Miro"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Read 'Inspired' by Marty Cagan", "Learn product frameworks", "Understand SDLC", "Basic SQL & analytics"]},
+            {"phase": "Skills (2-3 months)", "tasks": ["User research methods", "Wireframing (Figma basics)", "Data-driven decision making", "Write PRDs"]},
+            {"phase": "Practice (2-3 months)", "tasks": ["Product teardowns", "Case study practice", "Build side projects", "Network with PMs"]},
+            {"phase": "Break In (Ongoing)", "tasks": ["APM programs", "Transition from related role", "PM interview prep", "Build public portfolio"]},
+        ],
+        "salary_range": {"india": "₹10-40 LPA", "us": "$100K-$180K", "remote": "$60K-$140K"},
+        "job_titles": ["Product Manager", "Associate PM", "Senior PM", "Group PM", "VP of Product"],
+        "companies_hiring": ["Google", "Meta", "Amazon", "Flipkart", "Razorpay", "CRED", "Swiggy"],
+        "certifications": ["Google PM Certificate", "Product School Certification", "Pragmatic Institute"],
+        "difficulty": "Intermediate",
+        "demand": "High",
+    },
+    "blockchain_developer": {
+        "title": "Blockchain Developer",
+        "category": "Emerging Tech",
+        "description": "Build decentralized applications (dApps), smart contracts, and blockchain protocols.",
+        "required_skills": {
+            "languages": ["Solidity", "Rust", "JavaScript", "Go"],
+            "platforms": ["Ethereum", "Solana", "Polygon", "Polkadot"],
+            "tools": ["Hardhat", "Foundry", "Truffle", "MetaMask", "IPFS", "The Graph"],
+            "concepts": ["Smart Contracts", "DeFi", "NFTs", "DAOs", "Consensus Mechanisms", "Tokenomics", "Web3.js/Ethers.js"],
+        },
+        "roadmap": [
+            {"phase": "Foundation (1-2 months)", "tasks": ["Blockchain fundamentals", "Cryptography basics", "JavaScript/TypeScript", "How Ethereum works"]},
+            {"phase": "Smart Contracts (2-3 months)", "tasks": ["Solidity programming", "Hardhat development environment", "ERC-20, ERC-721 standards", "Testing & deployment"]},
+            {"phase": "dApps (2-3 months)", "tasks": ["Web3.js/Ethers.js", "Frontend integration", "DeFi protocols", "Security & auditing"]},
+            {"phase": "Advanced (Ongoing)", "tasks": ["Cross-chain development", "Layer 2 solutions", "Contribute to protocols", "Build production dApps"]},
+        ],
+        "salary_range": {"india": "₹8-40 LPA", "us": "$100K-$200K", "remote": "$70K-$180K"},
+        "job_titles": ["Blockchain Developer", "Smart Contract Developer", "Web3 Developer", "Protocol Engineer"],
+        "companies_hiring": ["Coinbase", "Binance", "Polygon", "Consensys", "Alchemy", "Crypto startups"],
+        "certifications": ["Alchemy University", "Cyfrin Updraft", "Blockchain Council Certification"],
+        "difficulty": "Advanced",
+        "demand": "Growing",
+    },
+}
+
+
+# def get_all_careers():
+#     """Return all career paths."""
+#     return CAREER_PATHS
+
+
+# def get_career_by_id(career_id):
+#     """Get a specific career path."""
+#     return CAREER_PATHS.get(career_id)
+
+# def get_careers_by_category(category):
+#     results = {}
+    
+#     # Har career pe loop chalao
+#     for career_id, career_data in CAREER_PATHS.items():
+        
+#         # Category check karo (lowercase mein compare)
+#         if career_data["category"].lower() == category.lower():
+#             results[career_id] = career_data
+    
+#     return results
+
+# # Most Important Function
+# def search_careers(query):
+#     """Search careers by keyword."""
+#     query_lower = query.lower()
+#     results = {}
+#     for career_id, career in CAREER_PATHS.items():
+#         searchable = f"{career['title']} {career['category']} {career['description']} {str(career['required_skills'])}".lower()
+        
+#         if query_lower in searchable:
+#             results[career_id] = career
+#     return results
+
+
+# def get_career_categories():
+#     """Get unique categories."""
+#     return list(set(c["category"] for c in CAREER_PATHS.values()))
