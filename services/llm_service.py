@@ -15,8 +15,8 @@ try:
     from google import genai
     from google.genai import types
 
-    if getattr(config, "GOOGLE_API_KEY", None):
-        _client = genai.Client(api_key=config.GOOGLE_API_KEY)
+    if getattr(config, "GEMINI_API_KEY", None):
+        _client = genai.Client(api_key=config.GEMINI_API_KEY)
     else:
         _client = None
 except Exception as e:
@@ -25,8 +25,8 @@ except Exception as e:
 
 
 def _ensure():
-    if not getattr(config, "GOOGLE_API_KEY", None) or not _client:
-        raise RuntimeError("GOOGLE_API_KEY missing — set in .env")
+    if not getattr(config, "GEMINI_API_KEY", None) or not _client:
+        raise RuntimeError("GEMINI_API_KEY missing — set in .env")
 
 
 def _repair_and_parse_json(raw_text: str) -> dict:

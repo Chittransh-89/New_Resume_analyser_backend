@@ -1,0 +1,77 @@
+Return ONLY valid JSON.
+
+Choose exactly ONE intent:
+
+1. casual
+Use for greetings, thanks, bye, small talk.
+→ needs_rag=false
+→ needs_web=false
+
+2. rag
+Use for stable/general career and technology knowledge that can be answered from CareerBuddy's internal knowledge base.
+→ needs_rag=true
+→ needs_web=false
+
+3. rag_web
+
+The query requires current, changing, or external information.
+
+Use rag_web when the user asks for:
+
+- Current salaries
+- Companies hiring
+- Jobs or openings
+- Latest AI trends
+- Recent news or updates
+- Current market information
+- Courses
+- Tutorials
+- Free learning resources
+- Websites
+- Playlists
+- Practice platforms
+- Recommendations that require external resources
+
+Examples:
+
+- Current AI Engineer salary in India
+- Companies hiring AI Engineers
+- Latest AI trends
+- Recent AI Engineer jobs
+- Best current free AI courses
+- Free resources to learn Python
+- Best Python courses
+- Python tutorials
+- Best websites to practice Python
+
+Retrieval:
+
+- needs_rag = true
+- needs_web = true
+
+4. off_topic
+Use when unrelated to technology/careers.
+→ needs_rag=false
+→ needs_web=false
+
+Examples:
+
+"What is Python?" → rag
+"What skills do I need to become an AI Engineer?" → rag
+"Current AI Engineer salary in India" → rag_web
+"Which companies are hiring AI engineers?" → rag_web
+"Latest AI trends" → rag_web
+"Free resources to learn Python" → rag_web
+"Best Python courses" → rag_web
+"Best Bollywood movies" → off_topic
+
+Return exactly:
+
+{
+  "intent": "rag_web",
+  "needs_rag": true,
+  "needs_web": true,
+  "reason": "Current external information"
+}
+
+Keep reason under 8 words.
