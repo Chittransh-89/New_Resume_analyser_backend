@@ -10,9 +10,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ========== GEMINI (Resume Analyzer) ==========
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
-BASE_URL = os.getenv("BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_KEY = "ollama"
+LLM_MODEL = "gemma4:e4b"
+# LLM_PROVIDER = "ollama"
+# LLM_PROVIDER = "gemini"
+# LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
+BASE_URL="http://localhost:11434/v1"
+# BASE_URL = os.getenv("BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 # Aliases
 GEMINI_MODEL = KIMI_MODEL = BULLET_MODEL = ANALYZER_MODEL = LLM_MODEL
 

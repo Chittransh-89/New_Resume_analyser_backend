@@ -26,8 +26,8 @@ class CareerBuddyBrain:
         #     base_url=Config.BASE_URL
         # )
         self.client = OpenAI(
-            base_url="http://localhost:11434/v1",
-            api_key="ollama"
+            base_url=Config.BASE_URL,
+            api_key=Config.GEMINI_API_KEY
         )
         # self.model = Config.LLM_MODEL
         self.model = "gemma4:e4b"
@@ -42,65 +42,65 @@ class CareerBuddyBrain:
         print("✅ CareerBuddy ready!\n")
 
         self.chat_history = []  # Initialize chat history
-        # self.web_triggers = [
-        #         # High confidence - ye definitely search chahte hain
-        #         "salary", "package", "ctc", "lpa",
-        #         "hiring", "jobs", "openings", "vacancy",
-        #         "trending", "demand", "market",
-        #         "youtube", "video", "tutorial", "course",
-        #         "free resources", "website",
-        #         "find me", "look up", "search for",
-        #         "companies hiring", "startups",
-        #         "news", "update", "recent",
-        #         "roadmap", "resources to learn",
-        #         "how to become", "getting started",
-        #         "playlist", "recommend", "suggest",
-        #         "best way to learn", "free course",
-        #         "projects for", "practice platform",
-        #     ]
+        self.web_triggers = [
+                # High confidence - ye definitely search chahte hain
+                "salary", "package", "ctc", "lpa",
+                "hiring", "jobs", "openings", "vacancy",
+                "trending", "demand", "market",
+                "youtube", "video", "tutorial", "course",
+                "free resources", "website",
+                "find me", "look up", "search for",
+                "companies hiring", "startups",
+                "news", "update", "recent",
+                "roadmap", "resources to learn",
+                "how to become", "getting started",
+                "playlist", "recommend", "suggest",
+                "best way to learn", "free course",
+                "projects for", "practice platform",
+            ]
 
     # decide: web chahiye ya nahi?
-    # def needs_web_search(self, query):
-    #     q = query.lower().strip()
+    def needs_web_search(self, query):
+        q = query.lower().strip()
 
-    #     # 1. SIMPLE GREETINGS / CASUAL QUERIES
-    #     greetings = {"hi", "hello", "hey", "hii", "hiii", "how are you", "what's up", "sup", "thanks", "thank you", "ok", "okay", "bye", "goodbye", "good morning", "good evening", "good night"}
+        # 1. SIMPLE GREETINGS / CASUAL QUERIES
+        greetings = {"hi", "hello", "hey", "hii", "hiii", "how are you", "what's up", "sup", "thanks", "thank you", "ok", "okay", "bye", "goodbye", "good morning", "good evening", "good night"}
 
-    #     # Exact greeting → NEVER use web search
-    #     if q in greetings:
-    #         return False
+        # Exact greeting → NEVER use web search
+        if q in greetings:
+            return False
 
-    #     # Examples:
-    #     # "hi bro"
-    #     # "hello bro"
-    #     # "hey there"
-    #     if re.fullmatch(r"(hi|hello|hey|hii|hiii)(\s+\w+)?[!.]?",q):
-    #         return False
+        # Examples:
+        # "hi bro"
+        # "hello bro"
+        # "hey there"
+        if re.fullmatch(r"(hi|hello|hey|hii|hiii)(\s+\w+)?[!.]?",q):
+            return False
 
-    #     # 2. VERY SHORT QUERY
-    #     if len(q.split()) <= 3:
+        # 2. VERY SHORT QUERY
+        if len(q.split()) <= 3:
 
-    #         # Allow important short queries such as:
-    #         # "AI salary"
-    #         # "AI jobs"
-    #         # "AI roadmap"
+            # Allow important short queries such as:
+            # "AI salary"
+            # "AI jobs"
+            # "AI roadmap"
 
-    #         important_triggers = [
-    #             "salary",
-    #             "jobs",
-    #             "hiring",
-    #             "roadmap"
-    #         ]
-    #         if not any(trigger in q for trigger in important_triggers):
-    #             return False
+            important_triggers = [
+                "salary",
+                "jobs",
+                "hiring",
+                "roadmap"
+            ]
+            if not any(trigger in q for trigger in important_triggers):
+                return False
 
         # 3. WEB SEARCH TRIGGERS
-        # for trigger in self.web_triggers:
-            # if trigger in q:
-            #     return True
+        for trigger in self.web_triggers:
+            if trigger in q:
+                return True
             
         # 4. DEFAULT → NO WEB SEARCH
-        # return False
+        return False
 
     # Bring Context from RAG
     def get_rag_context(self, user_query):
@@ -192,6 +192,16 @@ class CareerBuddyBrain:
             should_use_rag = route["needs_rag"]
             should_search = route["needs_web"]
 
+            # 2. Legacy intent fallback
+            if not should_search:
+                should_search = self.needs_web_search(user_query)
+
+            # 3. Explicit frontend request can force web search
+            if use_web_search is True:
+                should_search = True
+
+            print(f"🧭 Final decision → RAG: {should_use_rag}, WEB: {should_search}")
+
             # 2. RAG only when router says YES
             rag_context = ""
 
@@ -223,6 +233,7 @@ class CareerBuddyBrain:
 
             answer = self._clean_response(answer)
 
+            # 8. History
             self.chat_history.append({"role": "user", "content": user_query})
 
             self.chat_history.append({"role": "assistant", "content": answer})
@@ -233,7 +244,7 @@ class CareerBuddyBrain:
             # ✅ Links context se nikalo, answer se nahi
             all_links   = self._extract_web_links(web_context)
             yt_links    = self._extract_youtube_links(web_context)
-            google_links = [l for l in all_links if "google.com" in l]
+            google_links = [link for link in all_links if "google.com" in link]
             
             # ✅ Debug
             print(f"🔗 Google links: {len(google_links)}")
