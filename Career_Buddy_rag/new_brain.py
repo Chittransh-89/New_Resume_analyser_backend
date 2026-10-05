@@ -1,7 +1,12 @@
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+
+sys.path.append(CURRENT_DIR)
+sys.path.append(ROOT_DIR)
+
 from config import Config
 from openai import OpenAI
 from embeddings_store import EmbeddingsStore
@@ -11,11 +16,15 @@ from query_router import QueryRouter
 from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
-SYSTEM_PROMPT = (PROMPTS_DIR / "SYSTEM_PROMPT.txt").read_text(encoding="utf-8")
+
+SYSTEM_PROMPT = (
+    PROMPTS_DIR / "SYSTEM_PROMPT.txt"
+).read_text(encoding="utf-8")
 
 QUESTION_TYPE_DETECTION_PROMPT = (
     PROMPTS_DIR / "QUESTION_TYPE_DETECTION_PROMPT.txt"
 ).read_text(encoding="utf-8")
+
 class CareerBuddyBrain:
 
     # dependencies initialize
