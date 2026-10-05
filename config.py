@@ -12,7 +12,7 @@ load_dotenv()
 # ========== GEMINI (Resume Analyzer) ==========
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
-
+BASE_URL = os.getenv("BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 # Aliases
 GEMINI_MODEL = KIMI_MODEL = BULLET_MODEL = ANALYZER_MODEL = LLM_MODEL
 
@@ -42,6 +42,7 @@ class Config:
 
     GEMINI_API_KEY = GEMINI_API_KEY
     LLM_MODEL = LLM_MODEL
+    BASE_URL = BASE_URL
     GEMINI_MODEL = GEMINI_MODEL
     KIMI_MODEL = KIMI_MODEL
     BULLET_MODEL = BULLET_MODEL
