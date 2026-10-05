@@ -64,7 +64,7 @@ class EmbeddingsStore:
         print("  → Indexing careers...")
         
         for career_id, career in CAREER_PATHS.items():
-            
+            # doubt that (agar interviewer ne pucha ki doc banana kaise sikha then??)
             # Main career document
             doc = f"""Career: {career['title']}
                 Category: {career['category']}
@@ -80,6 +80,8 @@ class EmbeddingsStore:
                 Required Skills: {', '.join([skill for skills in career.get('required_skills', {}).values() for skill in skills])}"""
 
             documents.append(doc)
+
+            #doubt(variables ka issue what are metadata kaise pata ki hai meta hai ya nahi)
             metadatas.append({
                 "type": "career",
                 "career_id": career_id,
@@ -230,9 +232,10 @@ class EmbeddingsStore:
         
         for i, community in enumerate(COMMUNITIES):
             doc = f"""Community: {community['name']}
-URL: {community['url']}
-Platform: {community['platform']}
-Description: {community['description']}"""
+                URL: {community['url']}
+                Platform: {community['platform']}
+                Description: {community['description']}
+    """
 
             documents.append(doc)
             metadatas.append({
