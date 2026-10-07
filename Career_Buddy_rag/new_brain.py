@@ -1,5 +1,8 @@
+import logging
 import os
 import sys
+
+logger = logging.getLogger(__name__)
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
@@ -47,8 +50,11 @@ class CareerBuddyBrain:
 
         self.router = QueryRouter()
         print(f"🤖 Model loaded: {self.model}")
+        logger.info("🤖 Model loaded: %s", self.model)
         print("🧠 Initializing knowledge base...")
+        logger.info("🧠 Initializing knowledge base...")
         print("✅ CareerBuddy ready!\n")
+        logger.info("✅ CareerBuddy ready!\n")
 
         self.chat_history = []  # Initialize chat history
         self.web_triggers = [
@@ -157,10 +163,12 @@ class CareerBuddyBrain:
                         context += f"- {title}\n  URL: {url}\n"
 
             print(f"📝 Web context:\n{context[:500]}")
+            logger.info("📝 Web context:\n%s", context[:500])
             return context.strip()
 
         except Exception as e:
             print(f"❌ Web error: {e}")
+            logger.exception("❌ Web error: %s", e)
             import traceback
             traceback.print_exc()
             return ""
@@ -197,6 +205,7 @@ class CareerBuddyBrain:
              # 1. Understand query first
             route = self.router.classify(user_query)
             print(f"🧭 Router: {route}")
+            logger.info("🧭 Router: %s", route)
 
             should_use_rag = route["needs_rag"]
             should_search = route["needs_web"]
@@ -210,12 +219,14 @@ class CareerBuddyBrain:
                 should_search = True
 
             print(f"🧭 Final decision → RAG: {should_use_rag}, WEB: {should_search}")
+            logger.info("🧭 Final decision → RAG: %s, WEB: %s", should_use_rag, should_search)
 
             # 2. RAG only when router says YES
             rag_context = ""
 
             if should_use_rag:
                 print(f"🧠 Getting RAG context...")
+                logger.info("🧠 Getting RAG context...")
                 rag_context = self.get_rag_context(user_query)
 
             # 3. Web only when router says YES
@@ -223,6 +234,7 @@ class CareerBuddyBrain:
 
             if should_search:
                 print(f"🌐 Web search Query: {user_query}")
+                logger.info("🌐 Web search Query: %s", user_query)
                 web_context = self.get_web_context(user_query)
 
             messages = self.build_messages(
@@ -257,7 +269,9 @@ class CareerBuddyBrain:
             
             # ✅ Debug
             print(f"🔗 Google links: {len(google_links)}")
+            logger.info("🔗 Google links: %s", len(google_links))
             print(f"🎥 YT links:     {len(yt_links)}")
+            logger.info("🎥 YT links:     %s", len(yt_links))
 
             return {
                 "response"       : answer,
@@ -296,6 +310,7 @@ class CareerBuddyBrain:
         text = re.sub(r'\n{3,}', '\n\n', text)
 
         print("✅ Response cleaned")
+        logger.info("✅ Response cleaned")
 
         return text.strip()
 
@@ -361,15 +376,23 @@ if __name__ == "__main__":
     brain = CareerBuddyBrain()
 
     print("\n🔍 Methods check:")
+    logger.info("\n🔍 Methods check:")
     print(f"  get_rag_context:   {hasattr(brain, 'get_rag_context')}")
+    logger.info("  get_rag_context:   %s", hasattr(brain, 'get_rag_context'))
     print(f"  get_web_context:   {hasattr(brain, 'get_web_context')}")
+    logger.info("  get_web_context:   %s", hasattr(brain, 'get_web_context'))
     print(f"  needs_web_search:  {hasattr(brain, 'needs_web_search')}")
+    logger.info("  needs_web_search:  %s", hasattr(brain, 'needs_web_search'))
     print(f"  _clean_response:   {hasattr(brain, '_clean_response')}")
+    logger.info("  _clean_response:   %s", hasattr(brain, '_clean_response'))
     print(f"  _extract_youtube_links: {hasattr(brain, '_extract_youtube_links')}")
+    logger.info("  _extract_youtube_links: %s", hasattr(brain, '_extract_youtube_links'))
 
     test_questions = ["free resources to learn Python"]
 
     for i, q in enumerate(test_questions, 1):
         print(f"\n{'='*60}\n❓ Q{i}: {q}\n{'='*60}")
+        logger.info("\n%s\n❓ Q%s: %s\n%s", '='*60, i, q, '='*60)
         result = brain.chat(q)
         print(result["response"])
+        logger.info("%s", result["response"])

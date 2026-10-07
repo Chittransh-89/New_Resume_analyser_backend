@@ -1,6 +1,9 @@
 """Web search module – Generates multiple clickable search links (No scraping)"""
 
+import logging
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 
 class WebSearcher:
@@ -85,6 +88,7 @@ class WebSearcher:
             }
         except Exception as e:
             print(f"Search error: {e}")
+            logger.exception("Search error: %s", e)
             return {"web": [], "youtube": []}
 
 
@@ -93,9 +97,13 @@ if __name__ == "__main__":
     result = ws.search_career_resources("free resources to learn Python")
 
     print("=== WEB ===")
+    logger.info("=== WEB ===")
     for r in result["web"]:
         print(f"- {r['title']}\n  {r['url']}\n")
+        logger.info("- %s\n  %s\n", r['title'], r['url'])
 
     print("=== YOUTUBE ===")
+    logger.info("=== YOUTUBE ===")
     for r in result["youtube"]:
         print(f"- {r['title']}\n  {r['url']}\n")
+        logger.info("- %s\n  %s\n", r['title'], r['url'])

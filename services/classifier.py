@@ -1,6 +1,9 @@
 # services/classifier.py — document type + role (uses llm_service.py Gemini)
 import json
+import logging
 from services.llm_service import call_llm, call_llm_json
+
+logger = logging.getLogger(__name__)
 
 # Example: change prompt here to test different classification logic
 
@@ -36,6 +39,7 @@ def classify_single(text: str) -> dict:
         }
     except Exception as e:
         print(f"[classifier] single failed: {e}")
+        logger.exception("[classifier] single failed: %s", e)
         return {"type":"OTHER","job_role":"UNKNOWN","confidence":0}
 
 def classify_pair(resume_text: str, jd_text: str) -> dict:
@@ -44,6 +48,7 @@ def classify_pair(resume_text: str, jd_text: str) -> dict:
         return j
     except Exception as e:
         print(f"[classifier] pair failed: {e}")
+        logger.exception("[classifier] pair failed: %s", e)
         return {
             "document_a":{
                 "type":"OTHER",

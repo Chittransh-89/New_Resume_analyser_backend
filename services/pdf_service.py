@@ -1,5 +1,8 @@
 # services/pdf_service.py — PDF -> text (FAST: PyMuPDF + pdfplumber fallback)
+import logging
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 def extract_text(pdf_bytes: bytes) -> str:
     """Fast extract: try PyMuPDF (fitz) first, fallback to pdfplumber."""
@@ -18,6 +21,7 @@ def extract_text(pdf_bytes: bytes) -> str:
         pass
     except Exception as e:
         print(f"[pdf] fitz failed, fallback: {e}")
+        logger.exception("[pdf] fitz failed, fallback: %s", e)
 
     # FALLBACK: pdfplumber
     try:
@@ -31,7 +35,9 @@ def extract_text(pdf_bytes: bytes) -> str:
                         parts.append(t)
                 except Exception as e:
                     print(f"[pdf] page {i} failed: {e}")
+                    logger.exception("[pdf] page %s failed: %s", i, e)
         return "\n\n".join(parts).lower()
     except Exception as e:
         print(f"[pdf] extract error: {e}")
+        logger.exception("[pdf] extract error: %s", e)
         return ""

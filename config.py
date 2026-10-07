@@ -4,7 +4,10 @@ Loads all environment variables and app settings.
 """
 
 import os
+import logging
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Load .env file
 load_dotenv()
@@ -77,27 +80,35 @@ class Config:
 
         if not cls.GEMINI_API_KEY:
             print("⚠️  Warning: GEMINI_API_KEY not set (Resume analysis will fail)")
+            logger.warning("⚠️  Warning: GEMINI_API_KEY not set (Resume analysis will fail)")
 
         if errors:
             for err in errors:
                 print(err)
+                logger.error("%s", err)
             raise ValueError("Missing required environment variables!")
 
         print("✅ Config loaded successfully for FastAPI")
+        logger.info("✅ Config loaded successfully for FastAPI")
         return True
 
 
 def check_keys():
     if not GEMINI_API_KEY:
         print("⚠️  GEMINI_API_KEY missing — classify/analyze will 500 (set in .env)")
+        logger.warning("⚠️  GEMINI_API_KEY missing — classify/analyze will 500 (set in .env)")
 
 
 # Auto-validate when imported
 if __name__ == "__main__":
     Config.validate()
     print(f"Model: {Config.GEMINI_MODEL}")
+    logger.info("Model: %s", Config.GEMINI_MODEL)
     print(f"Port: {Config.PORT}")
+    logger.info("Port: %s", Config.PORT)
     print(f"API Prefix: {Config.API_V1_STR}")
+    logger.info("API Prefix: %s", Config.API_V1_STR)
     # print(f"DB Path: {Config.DATABASE_PATH}")
     print(f"CORS Origins: {Config.CORS_ORIGINS}")
+    logger.info("CORS Origins: %s", Config.CORS_ORIGINS)
     check_keys()
