@@ -1,8 +1,11 @@
 import re
 import json
 import asyncio
+import logging
 import pathlib
 from services.llm_service import async_call_llm_json
+
+logger = logging.getLogger(__name__)
 
 def extract_bullets(text: str) -> list:
     """Extracts candidate bullet points from resume plain text."""
@@ -79,5 +82,6 @@ async def improve_all(bullets: list, jd_text: str) -> list:
 
     except Exception as e:
         print(f"[bullets fallback triggered] Reason: {e}")
+        logger.exception("[bullets fallback triggered] Reason: %s", e)
         # Safe fallback: Never crash the request
         return [{"original": b, "improved": b} for b in selected_bullets]

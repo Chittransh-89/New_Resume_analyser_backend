@@ -1,6 +1,9 @@
 """ChromaDB-based RAG embeddings store for career knowledge."""
+import logging
 import os
 import sys
+
+logger = logging.getLogger(__name__)
 
 # Add the parent directory (NEW_RESUME_ANALYSER_BACKEND) to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -43,16 +46,19 @@ class EmbeddingsStore:
         self._initialized = False
         
         print(f"📁 ChromaDB Path: {persist_dir}")
+        logger.info("📁 ChromaDB Path: %s", persist_dir)
 
     def initialize(self):
         """Build embeddings from knowledge base data."""
         
         if self.collection.count() > 0:
             print(f"✅ Already initialized ({self.collection.count()} documents)")
+            logger.info("✅ Already initialized (%s documents)", self.collection.count())
             self._initialized = True
             return
 
         print("📚 Building embeddings store...")
+        logger.info("📚 Building embeddings store...")
 
         documents = []
         metadatas = []
@@ -62,6 +68,7 @@ class EmbeddingsStore:
         # PART 1: CAREER PATHS
         # ============================================
         print("  → Indexing careers...")
+        logger.info("  → Indexing careers...")
         
         for career_id, career in CAREER_PATHS.items():
             # doubt that (agar interviewer ne pucha ki doc banana kaise sikha then??)
@@ -124,6 +131,7 @@ class EmbeddingsStore:
         # PART 2: SKILLS
         # ============================================
         print("  → Indexing skills...")
+        logger.info("  → Indexing skills...")
         
         for skill_id, skill in SKILLS_DATABASE.items():
             doc = f"""Skill: {skill['name']}
@@ -158,6 +166,7 @@ class EmbeddingsStore:
         # PART 3: LEARNING PLATFORMS
         # ============================================
         print("  → Indexing platforms...")
+        logger.info("  → Indexing platforms...")
         
         for category, platforms in LEARNING_PLATFORMS.items():
             for i, platform in enumerate(platforms):
@@ -183,6 +192,7 @@ class EmbeddingsStore:
         # PART 4: YOUTUBE CHANNELS
         # ============================================
         print("  → Indexing YouTube channels...")
+        logger.info("  → Indexing YouTube channels...")
         
         for category, channels in YOUTUBE_CHANNELS.items():
             for i, channel in enumerate(channels):
@@ -208,6 +218,7 @@ class EmbeddingsStore:
         # PART 5: INTERVIEW RESOURCES
         # ============================================
         print("  → Indexing interview resources...")
+        logger.info("  → Indexing interview resources...")
         
         for category, resources in INTERVIEW_RESOURCES.items():
             for i, resource in enumerate(resources):
@@ -229,6 +240,7 @@ class EmbeddingsStore:
         # PART 6: COMMUNITIES
         # ============================================
         print("  → Indexing communities...")
+        logger.info("  → Indexing communities...")
         
         for i, community in enumerate(COMMUNITIES):
             doc = f"""Community: {community['name']}
@@ -250,6 +262,7 @@ class EmbeddingsStore:
         # BATCH ADD
         # ============================================
         print(f"  → Adding {len(documents)} documents to ChromaDB...")
+        logger.info("  → Adding %s documents to ChromaDB...", len(documents))
         
         batch_size = 100
         for i in range(0, len(documents), batch_size):
@@ -262,6 +275,7 @@ class EmbeddingsStore:
 
         self._initialized = True
         print(f"✅ Successfully indexed {len(documents)} documents!")
+        logger.info("✅ Successfully indexed %s documents!", len(documents))
 
     def query(self, query_text, n_results=None, filter_type=None):
         """Query the embeddings store.
@@ -312,12 +326,16 @@ class EmbeddingsStore:
 # --- Add this at the very bottom of embeddings_store.py ---
 if __name__ == "__main__":
     print("🚀 Initializing EmbeddingsStore test...")
+    logger.info("🚀 Initializing EmbeddingsStore test...")
     store = EmbeddingsStore()
     store.initialize()
     
     # Test a quick search query to see output
     results = store.query("Python Developer", n_results=2)
     print("\n🔍 Sample Search Results:")
+    logger.info("\n🔍 Sample Search Results:")
     for res in results:
         print(f"- Title: {res['metadata'].get('title')}")
+        logger.info("- Title: %s", res['metadata'].get('title'))
         print(f"  Content preview: {res['content'][:100]}...\n")
+        logger.info("  Content preview: %s...\n", res['content'][:100])

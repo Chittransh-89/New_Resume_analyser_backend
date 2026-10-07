@@ -123,6 +123,8 @@ import warnings
 
 import config
 
+logger = logging.getLogger(__name__)
+
 # ==========================================================
 # GENERAL CONFIG
 # ==========================================================
@@ -159,6 +161,7 @@ try:
 
 except Exception as e:
     print(f"[llm] Ollama init failed: {e}")
+    logger.exception("[llm] Ollama init failed: %s", e)
     _ollama_client = None
 
 
@@ -186,6 +189,7 @@ try:
 
 except Exception as e:
     print(f"[llm] genai init failed: {e}")
+    logger.exception("[llm] genai init failed: %s", e)
     _client = None
 
 

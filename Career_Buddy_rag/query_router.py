@@ -20,10 +20,13 @@ LLM Provider:
 """
 
 import json
+import logging
 import os
 import re
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 sys.path.append(
     os.path.abspath(
@@ -73,12 +76,14 @@ class QueryRouter:
             )
 
             print("🔎 Router result:",repr(result))
+            logger.info("🔎 Router result: %s", repr(result))
 
             # VALIDATE RESULT
             return self._validate_result(result)
 
         except Exception as e:
             print(f"❌ Query Router Error: {e}")
+            logger.exception("❌ Query Router Error: %s", e)
 
             # SAFE FALLBACK
             # If routing fails, use RAG rather than returning
@@ -204,11 +209,21 @@ if __name__ == "__main__":
 
     for query in test_queries:
         print("\n" + "=" * 70)
+        logger.info("\n" + "=" * 70)
         print(f"QUERY: {query}")
+        logger.info("QUERY: %s", query)
         print("=" * 70)
+        logger.info("=" * 70)
 
         result = router.classify(query)
         print(
+            json.dumps(
+                result,
+                indent=4
+            )
+        )
+        logger.info(
+            "%s",
             json.dumps(
                 result,
                 indent=4
