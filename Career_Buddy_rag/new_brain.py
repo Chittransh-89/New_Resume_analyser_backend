@@ -38,8 +38,8 @@ class CareerBuddyBrain:
             base_url=Config.BASE_URL,
             api_key=Config.GEMINI_API_KEY
         )
-        # self.model = Config.LLM_MODEL
-        self.model = "gemma4:e4b"
+        self.model = Config.LLM_MODEL
+        # self.model = "gemma4:e4b"
         self.system_prompt = SYSTEM_PROMPT
         self.web_searcher = WebSearcher()
         self.embeddings_store = EmbeddingsStore()
