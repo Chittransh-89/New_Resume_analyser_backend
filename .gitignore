@@ -5,3 +5,4 @@ MY_TRY/
 .venv/
 chroma_db
 chroma.sqlite3
+.pytest_cache
