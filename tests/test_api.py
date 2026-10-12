@@ -86,6 +86,8 @@ def test_analyze_e2e_mocked(monkeypatch):
     assert 0 <= body["score"]["final_score"] <= 100
     assert "matched_skills" in body["analysis"] and "missing_skills" in body["analysis"]
     assert body["score"]["breakdown"]["formula"].startswith("final = 0.35")
+    # Experience must be a real number, never null (UI shows "N/A" for null).
+    assert isinstance(body["candidate"]["experience_years"], (int, float))
 
 
 def test_analyze_reports_llm_failure_clearly(monkeypatch):
@@ -96,10 +98,10 @@ def test_analyze_reports_llm_failure_clearly(monkeypatch):
 
     c = _client_with_mocks(monkeypatch)
 
-    async def failing_evaluation(*a, **k):
+    def failing_evaluation(*a, **k):
         raise EvaluationError("LLM evaluation failed: quota exceeded")
 
-    monkeypatch.setattr(analyze_mod, "async_evaluate_resume", failing_evaluation)
+    monkeypatch.setattr(analyze_mod, "semantic_score", failing_evaluation)
     pdf = _pdf_bytes()
     r = c.post("/analyze/", files={"resume": ("resume.pdf", pdf, "application/pdf"),
                                    "jd": ("jd.pdf", pdf, "application/pdf")})

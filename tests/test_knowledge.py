@@ -31,3 +31,42 @@ def test_no_chromadb_dependency():
     assert "chromadb" not in src or "NO embeddings, NO ChromaDB" in src
     assert "PersistentClient" not in src
     assert not hasattr(mod.EmbeddingsStore, "collection")
+
+
+def test_query_router_greeting():
+    from Career_Buddy_rag.query_router import QueryRouter
+    router = QueryRouter()
+    res = router.classify("hi")
+    assert res["intent"] == "casual"
+    assert res["needs_rag"] is False
+    assert res["needs_web"] is False
+
+
+def test_query_router_llm_routing(monkeypatch):
+    import Career_Buddy_rag.query_router as qr_mod
+    from Career_Buddy_rag.query_router import QueryRouter
+
+    def fake_call_llm_json(prompt, model=None, **kwargs):
+        return {"intent": "rag_web", "needs_rag": True, "needs_web": True, "reason": "Salary query"}
+
+    monkeypatch.setattr(qr_mod, "call_llm_json", fake_call_llm_json)
+    router = QueryRouter()
+    res = router.classify("What is AI engineer salary?")
+    assert res["intent"] == "rag_web"
+    assert res["needs_rag"] is True
+    assert res["needs_web"] is True
+
+
+def test_query_router_fallback(monkeypatch):
+    import Career_Buddy_rag.query_router as qr_mod
+    from Career_Buddy_rag.query_router import QueryRouter
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("API fail")
+
+    monkeypatch.setattr(qr_mod, "call_llm_json", boom)
+    router = QueryRouter()
+    res = router.classify("some query")
+    assert res["intent"] == "rag"
+    assert res["needs_rag"] is True
+    assert res["needs_web"] is False

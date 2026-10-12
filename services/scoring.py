@@ -18,6 +18,8 @@ import re
 
 import rule_matcher
 from skills_map import SKILLS_MAP
+from services.evaluation import EVALUATION_PROMPT_TEMPLATE, validate_evaluation
+from services.llm_service import call_llm_json
 
 # Each weight is a share of the final score. They must add up to 1.0.
 WEIGHTS = {
@@ -133,13 +135,62 @@ def compute_weighted_score(skill_result: dict, llm_eval) -> dict:
     return result
 
 
-def final_score(resume_json: dict, skill_result: dict, jd_json: dict, llm_eval) -> dict:
-    """Combine everything into the final 0-100 score plus a verdict."""
-    parts = compute_weighted_score(skill_result or {}, llm_eval)
+def semantic_score(resume_json: dict, jd_json: dict) -> dict:
+    """
+    LLM-based contextual evaluation of resume vs JD (no local embeddings).
+    Returns category scores and an overall semantic/relevance score.
+    """
+    prompt = EVALUATION_PROMPT_TEMPLATE.format(
+        resume_json=str(resume_json)[:6000],
+        resume_text="",
+        jd_json=str(jd_json)[:4000],
+        jd_text="",
+    )
+    raw = call_llm_json(prompt, temperature=0.2, max_tokens=2500)
+    eval_obj = validate_evaluation(raw)
+    return {
+        "semantic_score": eval_obj.jd_relevance.score,
+        "experience": eval_obj.experience.score,
+        "projects": eval_obj.projects.score,
+        "education": eval_obj.education.score,
+        "jd_relevance": eval_obj.jd_relevance.score,
+        "missing_qualifications": eval_obj.missing_qualifications,
+        "section_scores": {
+            "experience": eval_obj.experience.score,
+            "projects": eval_obj.projects.score,
+            "education": eval_obj.education.score,
+            "jd_relevance": eval_obj.jd_relevance.score,
+        },
+        "evaluation": eval_obj,
+    }
+
+
+def final_score(resume_json: dict, skill_result: dict, arg3 = None, arg4 = None) -> dict:
+    """
+    Combine deterministic skill score + contextual evaluation into final 0-100 score:
+      - 35% Required Skills
+      - 25% Experience (LLM)
+      - 15% Projects (LLM)
+      - 10% Education (LLM)
+      - 15% Job Relevance (LLM)
+    Supports both signatures:
+      - final_score(resume, skills, sem_res, jd)
+      - final_score(resume, skills, jd, llm_eval)
+    """
+    # Identify which argument is evaluation data and which is jd_json
+    if hasattr(arg4, "experience") or (isinstance(arg4, dict) and ("experience" in arg4 or "semantic_score" in arg4)):
+        eval_data, jd_json = arg4, arg3
+    elif hasattr(arg3, "experience") or (isinstance(arg3, dict) and ("experience" in arg3 or "semantic_score" in arg3)):
+        eval_data, jd_json = arg3, arg4
+    else:
+        eval_data = arg4 if arg4 is not None else arg3
+        jd_json = arg3 if eval_data is arg4 else arg4
+
+    parts = compute_weighted_score(skill_result or {}, eval_data)
     total = parts["final_before_penalty"]
 
     spam_multiplier = 1.0
-    if jd_json:
+    if jd_json and isinstance(jd_json, dict):
         spam_multiplier = check_keyword_stuffing(resume_json or {}, jd_json)
         total = total * spam_multiplier
     total = round(max(0.0, min(100.0, total)), 2)
@@ -153,6 +204,12 @@ def final_score(resume_json: dict, skill_result: dict, jd_json: dict, llm_eval) 
     else:
         verdict = "Low Match"
 
+    req_score = parts["required_skills"]
+    skill_score = (skill_result or {}).get("skill_score", req_score)
+    sem_score = parts["jd_relevance"]
+    if isinstance(eval_data, dict) and "semantic_score" in eval_data:
+        sem_score = eval_data["semantic_score"]
+
     return {
         "final_score": total,
         "verdict": verdict,
@@ -162,6 +219,9 @@ def final_score(resume_json: dict, skill_result: dict, jd_json: dict, llm_eval) 
             "projects": parts["projects"],
             "education": parts["education"],
             "jd_relevance": parts["jd_relevance"],
+            "skill_match": skill_score,
+            "semantic_match": sem_score,
+            "required_skills_met": f"{req_score}%",
             "preferred_skills_info_only": (skill_result or {}).get("preferred_score", 0.0),
             "spam_multiplier": spam_multiplier,
             "weights": dict(WEIGHTS),

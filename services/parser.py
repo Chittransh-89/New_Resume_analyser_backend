@@ -9,10 +9,12 @@ You are an expert resume parser. Extract information from this resume and return
   "phone": "",
   "job_role": "",
   "skills": [],
+  "experience_years": 0,
   "experience": [{{"company": "", "role": "", "duration": "", "bullets": []}}],
   "education": [{{"degree": "", "institution": "", "year": ""}}],
   "projects": [{{"name": "", "description": "", "tech_used": []}}]
 }}
+Add up all job durations into experience_years as a plain number (0 for freshers or when not stated).
 
 Resume:
 {text}

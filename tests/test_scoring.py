@@ -64,6 +64,6 @@ def test_final_score_applies_spam_multiplier():
 
 def test_embedding_entrypoints_removed():
     from services import scoring
-    assert not hasattr(scoring, "semantic_score"), "embedding stub must be gone"
-    assert not hasattr(scoring, "calibrate_similarity"), "embedding stub must be gone"
     assert not hasattr(scoring, "_model"), "embedding model must not exist in scoring"
+    assert not hasattr(scoring, "SentenceTransformer"), "SentenceTransformer must not exist in scoring"
+    assert not hasattr(scoring, "cosine_similarity"), "cosine_similarity must not exist in scoring"
