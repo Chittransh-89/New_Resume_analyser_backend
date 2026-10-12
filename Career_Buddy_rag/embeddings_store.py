@@ -1,6 +1,16 @@
-"""ChromaDB-based RAG embeddings store for career knowledge."""
+"""Keyword-based career knowledge store (NO embeddings, NO ChromaDB, NO torch).
+
+Refactor note: the original ChromaDB + embedding implementation required
+downloading a local SentenceTransformer model at startup, which breaks
+lightweight deployment. This replacement keeps the SAME public API
+(EmbeddingsStore, initialize, query, get_relevant_context) so
+Career_Buddy_rag/new_brain.py and services/chat_service.py keep working,
+but retrieval is deterministic keyword overlap over the bundled
+database/*.py files. No network, no model download, no vector DB.
+"""
 import logging
 import os
+import re
 import sys
 
 logger = logging.getLogger(__name__)
@@ -8,71 +18,83 @@ logger = logging.getLogger(__name__)
 # Add the parent directory (NEW_RESUME_ANALYSER_BACKEND) to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import chromadb
 from config import Config
 # ===========================================
-# IMPORTS (Apne folder structure ke hisaab se adjust karein)
+# IMPORTS (bundled static knowledge base)
 # ===========================================
-from database.career_database.career_data import CAREER_PATHS
-from database.skills_database.skills_data import SKILLS_DATABASE
-from database.resources_database.resources_data import (
-    LEARNING_PLATFORMS,
-    YOUTUBE_CHANNELS,
-    INTERVIEW_RESOURCES,
-    COMMUNITIES
-)
+try:
+    from Career_Buddy_rag.database.career_database.career_data import CAREER_PATHS
+except ImportError:  # fallback when imported as top-level module
+    from database.career_database.career_data import CAREER_PATHS
+try:
+    from Career_Buddy_rag.database.skills_database.skills_data import SKILLS_DATABASE
+except ImportError:
+    from database.skills_database.skills_data import SKILLS_DATABASE
+try:
+    from Career_Buddy_rag.database.resources_database.resources_data import (
+        LEARNING_PLATFORMS,
+        YOUTUBE_CHANNELS,
+        INTERVIEW_RESOURCES,
+        COMMUNITIES,
+    )
+except ImportError:
+    from database.resources_database.resources_data import (
+        LEARNING_PLATFORMS,
+        YOUTUBE_CHANNELS,
+        INTERVIEW_RESOURCES,
+        COMMUNITIES,
+    )
+
+
+def _tokens(text: str) -> set:
+    return set(re.findall(r"[a-z0-9+.#]+", (text or "").lower()))
+
+
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "for", "to", "of", "in", "on", "with",
+    "how", "what", "which", "become", "be", "is", "are", "i", "me", "my",
+    "need", "needs", "want", "learn", "free", "best", "top",
+}
+
+
+def _score(query_tokens: set, doc_tokens: set) -> float:
+    if not query_tokens or not doc_tokens:
+        return 0.0
+    q = query_tokens - _STOPWORDS
+    if not q:
+        q = query_tokens
+    overlap = q & doc_tokens
+    # Recall-oriented: how much of the query is covered + small precision bonus.
+    recall = len(overlap) / max(1, len(q))
+    precision = len(overlap) / max(1, len(doc_tokens))
+    return recall + 0.1 * precision
 
 
 class EmbeddingsStore:
-    """Vector store for career knowledge using ChromaDB."""
+    """Deterministic keyword store with the same interface as the old vector store."""
+
     def __init__(self):
-        """Initialize ChromaDB client using Config settings."""
-        
-        # Config se path lo
-        persist_dir = Config.CHROMA_PERSIST_DIR
-        
-        # Folder create karo
-        os.makedirs(persist_dir, exist_ok=True)
-        
-        # Persistent client
-        self.client = chromadb.PersistentClient(path=persist_dir)
-        
-        # Collection
-        self.collection = self.client.get_or_create_collection(
-            name="career_knowledge",
-            metadata={"description": "Career guidance knowledge base"}
-        )
-        
+        """No external client; data lives in memory."""
+        self._documents: list = []
         self._initialized = False
-        
-        print(f"📁 ChromaDB Path: {persist_dir}")
-        logger.info("📁 ChromaDB Path: %s", persist_dir)
+
+        print("📁 Knowledge store: in-memory keyword index (no ChromaDB, no embeddings)")
+        logger.info("📁 Knowledge store: in-memory keyword index (no ChromaDB, no embeddings)")
 
     def initialize(self):
-        """Build embeddings from knowledge base data."""
-        
-        if self.collection.count() > 0:
-            print(f"✅ Already initialized ({self.collection.count()} documents)")
-            logger.info("✅ Already initialized (%s documents)", self.collection.count())
-            self._initialized = True
+        """Build in-memory documents from knowledge base data (idempotent)."""
+        if self._initialized:
             return
-
-        print("📚 Building embeddings store...")
-        logger.info("📚 Building embeddings store...")
+        print("📚 Building keyword knowledge store...")
+        logger.info("📚 Building keyword knowledge store...")
 
         documents = []
-        metadatas = []
-        ids = []
 
-        # ============================================
         # PART 1: CAREER PATHS
-        # ============================================
         print("  → Indexing careers...")
         logger.info("  → Indexing careers...")
-        
+
         for career_id, career in CAREER_PATHS.items():
-            # doubt that (agar interviewer ne pucha ki doc banana kaise sikha then??)
-            # Main career document
             doc = f"""Career: {career['title']}
                 Category: {career['category']}
                 Description: {career['description']}
@@ -85,54 +107,34 @@ class EmbeddingsStore:
                 Companies Hiring: {', '.join(career.get('companies_hiring', [])[:5])}
                 Top Certifications: {', '.join(career.get('certifications', [])[:3])}
                 Required Skills: {', '.join([skill for skills in career.get('required_skills', {}).values() for skill in skills])}"""
-
-            documents.append(doc)
-
-            #doubt(variables ka issue what are metadata kaise pata ki hai meta hai ya nahi)
-            metadatas.append({
-                "type": "career",
-                "career_id": career_id,
-                "title": career['title'],
-                "category": career['category'],
-                "difficulty": career.get('difficulty', 'N/A')
+            documents.append({
+                "content": doc,
+                "metadata": {"type": "career", "career_id": career_id, "title": career['title'],
+                             "category": career['category'], "difficulty": career.get('difficulty', 'N/A')},
             })
-            ids.append(f"career_{career_id}")
 
-            # Skills doc
             skills_doc = f"Skills needed for {career['title']}:\n"
             for skill_cat, skills in career.get('required_skills', {}).items():
                 skills_doc += f"  {skill_cat}: {', '.join(skills)}\n"
-
-            documents.append(skills_doc)
-            metadatas.append({
-                "type": "career_skills",
-                "career_id": career_id,
-                "title": f"{career['title']} Skills"
+            documents.append({
+                "content": skills_doc,
+                "metadata": {"type": "career_skills", "career_id": career_id, "title": f"{career['title']} Skills"},
             })
-            ids.append(f"skills_{career_id}")
 
-            # Roadmap doc
             roadmap_doc = f"Learning Roadmap for {career['title']}:\n"
             for phase in career.get('roadmap', []):
                 roadmap_doc += f"\n{phase['phase']}:\n"
                 for task in phase['tasks']:
                     roadmap_doc += f"  - {task}\n"
-
-            documents.append(roadmap_doc)
-            metadatas.append({
-                "type": "roadmap",
-                "career_id": career_id,
-                "title": f"{career['title']} Roadmap"
+            documents.append({
+                "content": roadmap_doc,
+                "metadata": {"type": "roadmap", "career_id": career_id, "title": f"{career['title']} Roadmap"},
             })
-            ids.append(f"roadmap_{career_id}")
-        
-        
-        # ============================================
+
         # PART 2: SKILLS
-        # ============================================
         print("  → Indexing skills...")
         logger.info("  → Indexing skills...")
-        
+
         for skill_id, skill in SKILLS_DATABASE.items():
             doc = f"""Skill: {skill['name']}
                 Category: {skill['category']}
@@ -144,30 +146,20 @@ class EmbeddingsStore:
                 YouTube Channels: {', '.join(skill.get('youtube_channels', [])[:5])}
                 Practice Platforms: {', '.join(skill.get('practice_platforms', []))}
             """
-
             for resource in skill.get('free_resources', [])[:3]:
                 doc += f"\nFree Resource: {resource['title']} - {resource['url']}"
-            
             if skill.get('prerequisites'):
                 doc += f"\nPrerequisites: {', '.join(skill['prerequisites'])}"
-
-            documents.append(doc)
-            metadatas.append({
-                "type": "skill",
-                "skill_id": skill_id,
-                "title": skill['name'],
-                "category": skill['category'],
-                "difficulty": skill.get('difficulty', 'N/A')
+            documents.append({
+                "content": doc,
+                "metadata": {"type": "skill", "skill_id": skill_id, "title": skill['name'],
+                             "category": skill['category'], "difficulty": skill.get('difficulty', 'N/A')},
             })
-            ids.append(f"skill_{skill_id}")
-        
-        
-        # ============================================
+
         # PART 3: LEARNING PLATFORMS
-        # ============================================
         print("  → Indexing platforms...")
         logger.info("  → Indexing platforms...")
-        
+
         for category, platforms in LEARNING_PLATFORMS.items():
             for i, platform in enumerate(platforms):
                 doc = f"""Learning Platform: {platform['name']}
@@ -178,22 +170,15 @@ class EmbeddingsStore:
                     Price: {platform.get('price_range', 'Free')}
                     Description: {platform['description']}
                 """
-
-                documents.append(doc)
-                metadatas.append({
-                    "type": "platform",
-                    "category": category,
-                    "title": platform['name']
+                documents.append({
+                    "content": doc,
+                    "metadata": {"type": "platform", "category": category, "title": platform['name']},
                 })
-                ids.append(f"platform_{category}_{i}")
-        
-        
-        # ============================================
+
         # PART 4: YOUTUBE CHANNELS
-        # ============================================
         print("  → Indexing YouTube channels...")
         logger.info("  → Indexing YouTube channels...")
-        
+
         for category, channels in YOUTUBE_CHANNELS.items():
             for i, channel in enumerate(channels):
                 doc = f"""YouTube Channel: {channel['name']}
@@ -203,133 +188,112 @@ class EmbeddingsStore:
                     Best For: {channel['best_for']}
                     Category: {category}
                 """
-
-                documents.append(doc)
-                metadatas.append({
-                    "type": "youtube",
-                    "category": category,
-                    "title": channel['name'],
-                    "language": channel.get('language', 'English')
+                documents.append({
+                    "content": doc,
+                    "metadata": {"type": "youtube", "category": category, "title": channel['name'],
+                                 "language": channel.get('language', 'English')},
                 })
-                ids.append(f"youtube_{category}_{i}")
-        
-        
-        # ============================================
+
         # PART 5: INTERVIEW RESOURCES
-        # ============================================
         print("  → Indexing interview resources...")
         logger.info("  → Indexing interview resources...")
-        
+
         for category, resources in INTERVIEW_RESOURCES.items():
             for i, resource in enumerate(resources):
                 doc = f"""Interview Resource: {resource['title']}
                     URL: {resource['url']}
                     Category: {category}
                     Description: {resource['description']}"""
-
-                documents.append(doc)
-                metadatas.append({
-                    "type": "interview",
-                    "category": category,
-                    "title": resource['title']
+                documents.append({
+                    "content": doc,
+                    "metadata": {"type": "interview", "category": category, "title": resource['title']},
                 })
-                ids.append(f"interview_{category}_{i}")
-        
-        
-        # ============================================
+
         # PART 6: COMMUNITIES
-        # ============================================
         print("  → Indexing communities...")
         logger.info("  → Indexing communities...")
-        
+
         for i, community in enumerate(COMMUNITIES):
             doc = f"""Community: {community['name']}
                 URL: {community['url']}
                 Platform: {community['platform']}
                 Description: {community['description']}
     """
-
-            documents.append(doc)
-            metadatas.append({
-                "type": "community",
-                "platform": community['platform'],
-                "title": community['name']
+            documents.append({
+                "content": doc,
+                "metadata": {"type": "community", "platform": community['platform'], "title": community['name']},
             })
-            ids.append(f"community_{i}")
-        
-        
-        # ============================================
-        # BATCH ADD
-        # ============================================
-        print(f"  → Adding {len(documents)} documents to ChromaDB...")
-        logger.info("  → Adding %s documents to ChromaDB...", len(documents))
-        
-        batch_size = 100
-        for i in range(0, len(documents), batch_size):
-            end = min(i + batch_size, len(documents))
-            self.collection.add(
-                documents=documents[i:end],
-                metadatas=metadatas[i:end],
-                ids=ids[i:end]
-            )
 
+        print(f"  → Indexed {len(documents)} documents (keyword search, no ChromaDB)...")
+        logger.info("  → Indexed %s documents (keyword search, no ChromaDB)...", len(documents))
+
+        # Precompute token sets for fast deterministic ranking.
+        for d in documents:
+            d["tokens"] = _tokens(d["content"] + " " + str(d["metadata"].get("title", "")))
+
+        self._documents = documents
         self._initialized = True
         print(f"✅ Successfully indexed {len(documents)} documents!")
         logger.info("✅ Successfully indexed %s documents!", len(documents))
 
     def query(self, query_text, n_results=None, filter_type=None):
-        """Query the embeddings store.
-        
+        """Query the store with keyword overlap ranking.
+
         Args:
             query_text: What to search for
             n_results: How many results (default from Config)
-            filter_type: Filter by type
+            filter_type: Filter by metadata type
         """
         if not self._initialized:
             self.initialize()
-        
-        # Default from config
+
         if n_results is None:
-            n_results = Config.MAX_SEARCH_RESULTS
+            try:
+                n_results = Config.MAX_SEARCH_RESULTS
+            except Exception:
+                n_results = 5
 
-        where_filter = None
-        if filter_type:
-            where_filter = {"type": filter_type}
+        qtokens = _tokens(query_text or "")
+        scored = []
+        for d in self._documents:
+            if filter_type and d["metadata"].get("type") != filter_type:
+                continue
+            s = _score(qtokens, d["tokens"])
+            if s > 0:
+                scored.append((s, d))
+        scored.sort(key=lambda x: x[0], reverse=True)
 
-        results = self.collection.query(
-            query_texts=[query_text],
-            n_results=n_results,
-            where=where_filter
-        )
-
-        formatted_results = []
-        if results and results['documents'] and results['documents'][0]:
-            for i, doc in enumerate(results['documents'][0]):
-                formatted_results.append({
-                    "content": doc,
-                    "metadata": results['metadatas'][0][i] if results['metadatas'] else {},
-                    "distance": results['distances'][0][i] if results['distances'] else 0
-                })
-
-        return formatted_results
+        formatted = []
+        for score, d in scored[: max(1, int(n_results or 5))]:
+            formatted.append({
+                "content": d["content"],
+                "metadata": d["metadata"],
+                "distance": round(1.0 - min(1.0, score), 4),
+                "score": round(score, 4),
+            })
+        return formatted
 
     def get_relevant_context(self, query, n_results=None):
         """Get relevant context for LLM from the knowledge base."""
         results = self.query(query, n_results=n_results)
-        
+
         if not results:
             return "No relevant information found in knowledge base."
-        
+
         context_parts = [r["content"] for r in results]
         return "\n\n---\n\n".join(context_parts)
 
+
+# Backwards-compat alias (old code imported KnowledgeStore-like names in places).
+KnowledgeStore = EmbeddingsStore
+
 # --- Add this at the very bottom of embeddings_store.py ---
 if __name__ == "__main__":
-    print("🚀 Initializing EmbeddingsStore test...")
-    logger.info("🚀 Initializing EmbeddingsStore test...")
+    print("🚀 Initializing keyword knowledge store test...")
+    logger.info("🚀 Initializing keyword knowledge store test...")
     store = EmbeddingsStore()
     store.initialize()
-    
+
     # Test a quick search query to see output
     results = store.query("Python Developer", n_results=2)
     print("\n🔍 Sample Search Results:")

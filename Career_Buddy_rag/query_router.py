@@ -5,8 +5,8 @@ Purpose:
 
 Possible decisions:
     - casual      -> no RAG, no web
-    - rag         -> use ChromaDB RAG
-    - rag_web     -> use ChromaDB + Web Search
+    - rag         -> use keyword knowledge-base RAG (no embeddings)
+    - rag_web     -> use knowledge base + Web Search
     - off_topic   -> no retrieval
 
 LLM Provider:

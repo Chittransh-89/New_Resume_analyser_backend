@@ -1,26 +1,11 @@
-import gradio as gr
-from gradio.routes import mount_gradio_app
+# app.py — HF Spaces / local launcher alias.
+# The real application lives in main.py (FastAPI `app`).
+# This file exists so both `main:app` and `app:app` work as entry points.
+from main import app  # noqa: F401
 
-from main import app as fastapi_app
-
-
-# Minimal Gradio interface for the Hugging Face Space.
-# The actual Resume Analyzer API remains the existing FastAPI app.
-demo = gr.Interface(
-    fn=lambda: "Resume Analyzer FastAPI backend is running.",
-    inputs=None,
-    outputs="text",
-    title="Resume Analyzer Backend",
-    description="FastAPI backend deployed on Hugging Face Spaces.",
-)
-
-# Mount Gradio onto the existing FastAPI application.
-# Existing FastAPI routes remain available.
-app = mount_gradio_app(
-    fastapi_app,
-    demo,
-    path="/",
-)
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=7860)
+
+    port = int(os.getenv("PORT", "7860"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

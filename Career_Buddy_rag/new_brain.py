@@ -12,10 +12,16 @@ sys.path.append(ROOT_DIR)
 
 from config import Config
 from openai import OpenAI
-from embeddings_store import EmbeddingsStore
+try:
+    from embeddings_store import EmbeddingsStore
+except ImportError:  # package-style import (services.chat_service -> Career_Buddy_rag.new_brain)
+    from Career_Buddy_rag.embeddings_store import EmbeddingsStore
 from services.web_search import WebSearcher
 import re
-from query_router import QueryRouter
+try:
+    from query_router import QueryRouter
+except ImportError:
+    from Career_Buddy_rag.query_router import QueryRouter
 from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"

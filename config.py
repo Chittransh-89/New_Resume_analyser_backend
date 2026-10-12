@@ -24,19 +24,28 @@ BASE_URL = os.getenv("BASE_URL", "https://generativelanguage.googleapis.com/v1be
 # Aliases
 GEMINI_MODEL = KIMI_MODEL = BULLET_MODEL = ANALYZER_MODEL = LLM_MODEL
 
-# ========== Databases & Storage ==========
-CHROMA_PERSIST_DIR = r"E:\NEW_RESUME_ANALYSER_BACKEND\Career_Buddy_rag\chroma_db"
+# ========== Databases & Storage (portable; no hardcoded machine paths) ==========
+# CareerBuddy now uses deterministic keyword retrieval over bundled data files,
+# so no ChromaDB persist dir is required. Kept for backwards-compat only.
+CHROMA_PERSIST_DIR = os.getenv(
+    "CHROMA_PERSIST_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "Career_Buddy_rag", "chroma_db"),
+)
 # DATABASE_PATH = os.getenv("DATABASE_PATH", "career_assistant.db")
 
-# ========== Embeddings & External APIs ==========
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+# ========== External APIs ==========
+# EMBEDDING_MODEL is deprecated: resume scoring is LLM-only, no local embeddings.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "")
 # YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 
 # ========== FastAPI App Settings ==========
 APP_NAME = "CareerBuddy API"
 API_V1_STR = os.getenv("API_V1_STR", "/api/v1")
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT =  8000
+try:
+    PORT = int(os.getenv("PORT", "8000"))
+except ValueError:
+    PORT = 8000
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
