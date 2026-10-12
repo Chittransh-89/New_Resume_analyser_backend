@@ -14,12 +14,8 @@ load_dotenv()
 
 # ========== GEMINI (Resume Analyzer) ==========
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-# GEMINI_API_KEY = "ollama"
-# LLM_MODEL = "gemma4:e4b"
-# LLM_PROVIDER = "ollama"
 LLM_PROVIDER = "gemini"
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
-# BASE_URL="http://localhost:11434/v1"
 BASE_URL = os.getenv("BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
 # Aliases
 GEMINI_MODEL = KIMI_MODEL = BULLET_MODEL = ANALYZER_MODEL = LLM_MODEL
@@ -65,7 +61,6 @@ class Config:
     BULLET_MODEL = BULLET_MODEL
     ANALYZER_MODEL = ANALYZER_MODEL
 
-    # DATABASE_PATH = DATABASE_PATH
     CHROMA_PERSIST_DIR = CHROMA_PERSIST_DIR
     EMBEDDING_MODEL = EMBEDDING_MODEL
 
@@ -84,18 +79,11 @@ class Config:
 
     @classmethod
     def validate(cls):
-        """Validate critical API keys."""
-        errors = []
-
+        """Warn when critical API keys are missing. Returns True always;
+        routes fail clearly later if the key is actually needed."""
         if not cls.GEMINI_API_KEY:
             print("⚠️  Warning: GEMINI_API_KEY not set (Resume analysis will fail)")
             logger.warning("⚠️  Warning: GEMINI_API_KEY not set (Resume analysis will fail)")
-
-        if errors:
-            for err in errors:
-                print(err)
-                logger.error("%s", err)
-            raise ValueError("Missing required environment variables!")
 
         print("✅ Config loaded successfully for FastAPI")
         logger.info("✅ Config loaded successfully for FastAPI")
@@ -117,7 +105,6 @@ if __name__ == "__main__":
     logger.info("Port: %s", Config.PORT)
     print(f"API Prefix: {Config.API_V1_STR}")
     logger.info("API Prefix: %s", Config.API_V1_STR)
-    # print(f"DB Path: {Config.DATABASE_PATH}")
     print(f"CORS Origins: {Config.CORS_ORIGINS}")
     logger.info("CORS Origins: %s", Config.CORS_ORIGINS)
     check_keys()

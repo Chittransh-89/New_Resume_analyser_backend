@@ -1,10 +1,10 @@
 import asyncio
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services.pdf_service import extract_text, validate_pdf_upload, looks_scanned
+from services.pdf_service import extract_text, validate_pdf_upload
 from services.classifier import classify_pair
 from services.parser import async_parse_resume, async_parse_jd
 from services.scoring import extract_skills, match_skills, final_score
-from services.evaluation import async_evaluate_resume
+from services.evaluation import EvaluationError, async_evaluate_resume
 from services.bullets import extract_bullets, improve_all
 from services.llm_service import async_call_llm_json
 
@@ -45,9 +45,6 @@ async def analyze(
             else:
                 detail = "Could not extract text from job-description PDF. If scanned/image-only, export a text-based PDF or enable OCR."
             raise HTTPException(status_code=400, detail=detail)
-        if looks_scanned(r_text) or looks_scanned(j_text):
-            # Warn but continue: extraction produced suspiciously little text.
-            pass
 
         # 2. Document Validation (1 Call)
         cls = await asyncio.to_thread(classify_pair, r_text, j_text)
@@ -71,8 +68,12 @@ async def analyze(
 
         # 5. LLM contextual evaluation (NO embeddings) + deterministic weighted score.
         # Formula: final = 0.35*required + 0.25*exp + 0.15*projects + 0.10*edu + 0.15*relevance
-        llm_eval = await async_evaluate_resume(r_json, j_json, r_text, j_text)
-        score_res = final_score(r_json, skill_res, None, j_json, llm_eval=llm_eval)
+        try:
+            llm_eval = await async_evaluate_resume(r_json, j_json, r_text, j_text)
+        except EvaluationError as e:
+            # Genuine LLM failure: say so clearly instead of scoring with zeros.
+            raise HTTPException(status_code=502, detail=f"LLM evaluation failed: {e}")
+        score_res = final_score(r_json, skill_res, j_json, llm_eval)
 
         # 6. LLM Review Prompt Helper (Safe with fallback)
         async def _review():

@@ -4,6 +4,7 @@ emoji: 👀
 colorFrom: yellow
 colorTo: purple
 sdk: docker
+app_port: 7860
 pinned: false
 ---
 
@@ -20,9 +21,9 @@ model is downloaded or required at startup.
   `SentenceTransformer(...)` model loads in `services/scoring.py` and
   `rule_matcher.py`.
 - **New LLM evaluation:** `services/evaluation.py` asks Gemini for structured
-  JSON scores (experience / projects / education / JD relevance + evidence),
-  validated with Pydantic. Invalid JSON, empty responses, timeouts, rate limits
-  fall back gracefully — the API never crashes.
+   JSON scores (experience / projects / education / JD relevance + evidence),
+   validated with Pydantic. Invalid JSON, empty responses, timeouts, rate limits
+   raise a clear error (HTTP 502) instead of hiding behind fake zero scores.
 - **Deterministic scoring:** `services/scoring.py` computes the final score in
   plain Python (see formula below). Skills use `rule_matcher.py` exact
   alias-map + word-boundary matching (full / partial / missing).
@@ -79,14 +80,15 @@ uvicorn main:app --reload --port 8000
 | `GEMINI_API_KEY` | Gemini auth (required for evaluation; never commit) |
 | `LLM_MODEL` | default `gemini-3.5-flash-lite` |
 | `BASE_URL` | OpenAI-compatible base URL for Gemini |
-| `PORT` | server port (hosts inject this; default 8000) |
+| `PORT` | server port (Docker default 7860 for HF Spaces; local uvicorn default 8000) |
 | `CORS_ORIGINS` | comma-separated origins, `*` for dev |
 
 ## Docker / Hugging Face Spaces (Docker)
 
 ```bash
 docker build -t resume-analyzer-backend .
-docker run -p 8000:8000 --env-file .env resume-analyzer-backend
+docker run -p 7860:7860 --env-file .env resume-analyzer-backend
+# Another host / port: docker run -p 8000:8000 -e PORT=8000 --env-file .env resume-analyzer-backend
 ```
 
 For a Docker Space: push this repo, set Space SDK to Docker, add

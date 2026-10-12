@@ -34,11 +34,6 @@ def clean_text(text: str) -> str:
     return re.sub(r'\s+', ' ', text).strip()
 
 
-def normalize_skill(skill: str) -> str:
-    """Normalize a single skill string for deterministic comparison."""
-    return clean_text(skill or "")
-
-
 def clean_skill_string(skill: str) -> list:
     """
     Parentheses split:
@@ -125,13 +120,8 @@ def match_status(jd_skill: str, resume_text: str, resume_canonicals: set) -> str
     return "missing"
 
 
-def is_skill_matched(jd_skill: str, resume_skills: list, resume_embs=None) -> bool:
-    """
-    Backwards-compatible boolean matcher (full match only).
-
-    resume_embs is accepted but IGNORED (kept so old callers don't break).
-    Deterministic: SKILLS_MAP canonical + word-boundary matching only.
-    """
+def is_skill_matched(jd_skill: str, resume_skills: list) -> bool:
+    """True when one JD skill fully matches the resume skills."""
     if not jd_skill or not resume_skills:
         return False
     resume_text = clean_text(" ".join(resume_skills))

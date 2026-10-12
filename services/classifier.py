@@ -1,7 +1,6 @@
 # services/classifier.py — document type + role (uses llm_service.py Gemini)
-import json
 import logging
-from services.llm_service import call_llm, call_llm_json
+from services.llm_service import call_llm_json
 
 logger = logging.getLogger(__name__)
 

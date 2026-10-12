@@ -1,16 +1,11 @@
-# services/evaluation.py — LLM-only contextual resume evaluation (no embeddings).
-"""
-LLM-based contextual evaluation for the resume scoring pipeline.
-
-Design (per refactor spec):
-- No local embedding model, no sentence-transformers, no cosine similarity.
-- The LLM (Gemini via services.llm_service) evaluates contextual categories.
-- Ordinary Python code computes the final weighted score (see services/scoring.py).
-- The LLM must return structured JSON; validated with Pydantic.
-- The LLM must NOT invent qualifications not supported by the resume.
-- Failures (invalid JSON, empty response, API error, timeout, rate limit)
-  degrade gracefully to a zero-score fallback so the API never crashes.
-"""
+# services/evaluation.py — LLM contextual resume evaluation (no embeddings).
+#
+# The LLM scores four categories (experience, projects, education,
+# job-description relevance). Plain Python in services/scoring.py then
+# combines those with deterministic skill matching into the final score.
+#
+# If the LLM call fails, this module RAISES EvaluationError — it never
+# returns fake zero scores that look like a real evaluation.
 
 import asyncio
 import logging
@@ -22,58 +17,66 @@ from services.llm_service import async_call_llm_json
 logger = logging.getLogger(__name__)
 
 EVALUATION_TIMEOUT_SECONDS = 60
+CATEGORIES = ("experience", "projects", "education", "jd_relevance")
+
+
+class EvaluationError(Exception):
+    """Raised when contextual LLM evaluation fails (API error, timeout,
+    empty response, or invalid JSON). Callers must surface this clearly."""
+
+
+def _to_score(value) -> int:
+    """Convert anything to a 0-100 int. Unparseable values become 0."""
+    try:
+        return max(0, min(100, int(float(value))))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _to_str_list(value, limit: int) -> list:
+    """Convert anything to a short list of strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    try:
+        return [str(item) for item in list(value)][:limit]
+    except TypeError:
+        return [str(value)]
 
 
 class CategoryScore(BaseModel):
-    """Score + evidence for a single contextual category (0-100)."""
+    """One category: score 0-100 plus the resume evidence behind it."""
 
-    score: int = Field(default=0, ge=0, le=100, description="Category score 0-100")
-    evidence: list[str] = Field(default_factory=list)
+    score: int = Field(default=0, ge=0, le=100)
+    evidence: list = Field(default_factory=list)
     explanation: str = Field(default="")
 
     @field_validator("score", mode="before")
     @classmethod
     def _coerce_score(cls, v):
-        try:
-            v = int(float(v))
-        except (TypeError, ValueError):
-            return 0
-        return max(0, min(100, v))
+        return _to_score(v)
 
     @field_validator("evidence", mode="before")
     @classmethod
     def _coerce_evidence(cls, v):
-        if v is None:
-            return []
-        if isinstance(v, str):
-            return [v]
-        try:
-            return [str(x) for x in list(v)][:5]
-        except TypeError:
-            return [str(v)]
+        return _to_str_list(v, 5)
 
 
 class LLMEvaluation(BaseModel):
-    """Validated LLM evaluation covering contextual categories."""
+    """Validated LLM judgement for all four contextual categories."""
 
     experience: CategoryScore = Field(default_factory=CategoryScore)
     projects: CategoryScore = Field(default_factory=CategoryScore)
     education: CategoryScore = Field(default_factory=CategoryScore)
     jd_relevance: CategoryScore = Field(default_factory=CategoryScore)
-    missing_qualifications: list[str] = Field(default_factory=list)
+    missing_qualifications: list = Field(default_factory=list)
     clarity_notes: str = Field(default="")
 
     @field_validator("missing_qualifications", mode="before")
     @classmethod
     def _coerce_missing(cls, v):
-        if v is None:
-            return []
-        if isinstance(v, str):
-            return [v]
-        try:
-            return [str(x) for x in list(v)][:10]
-        except TypeError:
-            return [str(v)]
+        return _to_str_list(v, 10)
 
 
 EVALUATION_PROMPT_TEMPLATE = """You are a strict, fair technical recruiter evaluating a resume against a job description.
@@ -116,42 +119,28 @@ Job description (raw text, truncated):
 """
 
 
-def fallback_evaluation(reason: str) -> LLMEvaluation:
-    """Deterministic fallback used when the LLM call fails or validates badly."""
-    return LLMEvaluation(
-        experience=CategoryScore(score=0, evidence=[], explanation=f"LLM unavailable: {reason}"),
-        projects=CategoryScore(score=0, evidence=[], explanation=f"LLM unavailable: {reason}"),
-        education=CategoryScore(score=0, evidence=[], explanation=f"LLM unavailable: {reason}"),
-        jd_relevance=CategoryScore(score=0, evidence=[], explanation=f"LLM unavailable: {reason}"),
-        missing_qualifications=[],
-        clarity_notes=f"Evaluation fallback: {reason}",
-    )
-
-
 def validate_evaluation(raw: object) -> LLMEvaluation:
-    """Validate raw LLM output into LLMEvaluation, raising on failure."""
+    """Check raw LLM output and return a validated LLMEvaluation.
+
+    Raises EvaluationError (never returns fake scores) when the response
+    is empty, not a dict, or fails schema validation.
+    """
     if raw is None:
-        raise ValueError("Empty LLM response")
+        raise EvaluationError("LLM returned an empty response.")
     if isinstance(raw, str):
-        raise ValueError("LLM returned string instead of JSON object")
+        raise EvaluationError("LLM returned text instead of a JSON object.")
     if not isinstance(raw, dict):
-        raise ValueError(f"LLM returned non-object: {type(raw).__name__}")
-    return LLMEvaluation.model_validate(raw)
+        raise EvaluationError(f"LLM returned {type(raw).__name__} instead of a JSON object.")
+    try:
+        return LLMEvaluation.model_validate(raw)
+    except Exception as e:
+        raise EvaluationError(f"LLM response failed validation: {e}")
 
 
-async def async_evaluate_resume(
-    resume_json: dict,
-    jd_json: dict,
-    resume_text: str = "",
-    jd_text: str = "",
-    timeout: float = EVALUATION_TIMEOUT_SECONDS,
-) -> LLMEvaluation:
-    """
-    Evaluate resume vs JD with the LLM and return a validated LLMEvaluation.
-
-    Never raises: on any failure returns fallback_evaluation() so the
-    scoring pipeline can still produce a deterministic result.
-    """
+async def async_evaluate_resume(resume_json: dict, jd_json: dict, resume_text: str = "",
+                                jd_text: str = "", timeout: float = EVALUATION_TIMEOUT_SECONDS,
+                                ) -> LLMEvaluation:
+    """Score resume vs JD with the LLM. Raises EvaluationError on any failure."""
     prompt = EVALUATION_PROMPT_TEMPLATE.format(
         resume_json=str(resume_json)[:6000],
         resume_text=(resume_text or "")[:4000],
@@ -163,19 +152,12 @@ async def async_evaluate_resume(
             async_call_llm_json(prompt, temperature=0.2, max_tokens=2500),
             timeout=timeout,
         )
-        try:
-            return validate_evaluation(raw)
-        except Exception as e:
-            print(f"[evaluation] validation failed: {e}")
-            logger.exception("[evaluation] validation failed: %s", e)
-            return fallback_evaluation(f"invalid LLM response ({e})")
-    except asyncio.TimeoutError as e:
-        print(f"[evaluation] LLM timeout: {e}")
-        logger.exception("[evaluation] LLM timeout: %s", e)
-        return fallback_evaluation("LLM timeout")
+    except asyncio.TimeoutError:
+        print("[evaluation] LLM timed out.")
+        logger.exception("[evaluation] LLM timed out.")
+        raise EvaluationError("LLM evaluation timed out.")
     except Exception as e:
-        msg = str(e)
-        # Rate-limit / quota / auth errors are common; keep message short, no secrets.
-        print(f"[evaluation] LLM error: {msg[:200]}")
-        logger.exception("[evaluation] LLM error: %s", msg[:200])
-        return fallback_evaluation(f"LLM error ({msg[:120]})")
+        print(f"[evaluation] LLM call failed: {str(e)[:200]}")
+        logger.exception("[evaluation] LLM call failed: %s", str(e)[:200])
+        raise EvaluationError(f"LLM evaluation failed: {str(e)[:200]}")
+    return validate_evaluation(raw)

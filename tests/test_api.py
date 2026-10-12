@@ -1,21 +1,8 @@
 """API schema tests with LLM fully mocked (no network, no keys)."""
-import io
 import tests.conftest  # noqa: F401
 from fastapi.testclient import TestClient
 
 import services.evaluation as evaluation_mod
-from services.evaluation import LLMEvaluation, CategoryScore
-
-
-def _fake_eval():
-    return LLMEvaluation(
-        experience=CategoryScore(score=70, evidence=["Did X"], explanation="solid"),
-        projects=CategoryScore(score=60, evidence=[], explanation="ok"),
-        education=CategoryScore(score=50, evidence=[], explanation="ok"),
-        jd_relevance=CategoryScore(score=80, evidence=[], explanation="relevant"),
-        missing_qualifications=["Kubernetes"],
-        clarity_notes="clear",
-    )
 
 
 def _client_with_mocks(monkeypatch):
@@ -99,6 +86,25 @@ def test_analyze_e2e_mocked(monkeypatch):
     assert 0 <= body["score"]["final_score"] <= 100
     assert "matched_skills" in body["analysis"] and "missing_skills" in body["analysis"]
     assert body["score"]["breakdown"]["formula"].startswith("final = 0.35")
+
+
+def test_analyze_reports_llm_failure_clearly(monkeypatch):
+    # When the LLM evaluation genuinely fails, the API must answer 502 —
+    # never a successful-looking score built from zeros.
+    import routers.analyze as analyze_mod
+    from services.evaluation import EvaluationError
+
+    c = _client_with_mocks(monkeypatch)
+
+    async def failing_evaluation(*a, **k):
+        raise EvaluationError("LLM evaluation failed: quota exceeded")
+
+    monkeypatch.setattr(analyze_mod, "async_evaluate_resume", failing_evaluation)
+    pdf = _pdf_bytes()
+    r = c.post("/analyze/", files={"resume": ("resume.pdf", pdf, "application/pdf"),
+                                   "jd": ("jd.pdf", pdf, "application/pdf")})
+    assert r.status_code == 502
+    assert "LLM evaluation failed" in r.json()["detail"]
 
 
 def test_classify_rejects_non_pdf():

@@ -1,5 +1,4 @@
 """Weighted scoring tests (pure Python, no embeddings, no LLM calls)."""
-import pytest
 import tests.conftest  # noqa: F401
 from services.scoring import (
     WEIGHTS, compute_weighted_score, final_score, check_keyword_stuffing,
@@ -30,8 +29,16 @@ def test_weighted_formula_exact():
 
 def test_final_score_verdicts():
     skill = {"required_score": 100.0, "preferred_score": 0.0}
-    assert final_score({}, skill, None, None, llm_eval=_eval(100, 100, 100, 100))["verdict"] == "Strong Match"
-    assert final_score({}, skill, None, None, llm_eval=_eval(0, 0, 0, 0))["verdict"] == "Low Match"
+    assert final_score({}, skill, None, _eval(100, 100, 100, 100))["verdict"] == "Strong Match"
+    assert final_score({}, skill, None, _eval(0, 0, 0, 0))["verdict"] == "Low Match"
+
+
+def test_final_score_stays_in_range():
+    skill = {"required_score": 100.0, "preferred_score": 100.0}
+    out = final_score({}, skill, None, _eval(100, 100, 100, 100))
+    assert 0 <= out["final_score"] <= 100
+    out = final_score({}, {"required_score": -50.0}, None, _eval(-9, 999, 0, 0))
+    assert 0 <= out["final_score"] <= 100
 
 
 def test_spam_penalty_documented():
@@ -50,15 +57,13 @@ def test_final_score_applies_spam_multiplier():
           "preferred_skills": []}
     skill = {"required_score": 100.0, "preferred_score": 0.0}
     llm = _eval(100, 100, 100, 100)
-    out = final_score(resume, skill, None, jd, llm_eval=llm)
+    out = final_score(resume, skill, jd, llm)
     assert out["final_score"] == round(100.0 * 0.80, 2)
     assert out["breakdown"]["spam_multiplier"] == 0.80
 
 
 def test_embedding_entrypoints_removed():
     from services import scoring
-    with pytest.raises(RuntimeError):
-        scoring.semantic_score({}, {})
-    with pytest.raises(RuntimeError):
-        scoring.calibrate_similarity(0.8)
+    assert not hasattr(scoring, "semantic_score"), "embedding stub must be gone"
+    assert not hasattr(scoring, "calibrate_similarity"), "embedding stub must be gone"
     assert not hasattr(scoring, "_model"), "embedding model must not exist in scoring"

@@ -1,41 +1,25 @@
-# services/scoring.py — LLM-only ATS scoring (NO embeddings).
-"""
-Final scoring pipeline: deterministic Python + LLM contextual scores.
-
-FINAL SCORING FORMULA (documented, no hidden caps):
-    final = (
-        0.35 * required_skills_score
-        + 0.25 * experience_score (LLM)
-        + 0.15 * projects_score (LLM)
-        + 0.10 * education_score (LLM)
-        + 0.15 * jd_relevance_score (LLM)
-    )
-    if keyword stuffing detected: final *= 0.80  (documented 20% penalty)
-
-- required_skills_score: deterministic 0-100 from rule_matcher
-  (full=1.0, partial=0.5, missing=0).
-- experience/projects/education/jd_relevance: validated LLM 0-100 scores.
-- Preferred skills are informational only (do NOT affect final) to avoid
-  double-counting; they appear in the response for feedback.
-- Missing sections score 0 naturally via the weights (no hidden caps).
-- No SentenceTransformer, no torch, no sklearn, no cosine similarity.
-
-Verdicts (on final 0-100):
-  >=80 Strong Match, >=65 Good Match, >=45 Moderate Match, else Low Match.
-"""
+# services/scoring.py — final score math (plain Python, NO embeddings).
+#
+# FINAL SCORING FORMULA (weights add up to 100%):
+#     final = 0.35 * required_skills          (deterministic text matching)
+#           + 0.25 * experience      (LLM)    + 0.15 * projects (LLM)
+#           + 0.10 * education       (LLM)    + 0.15 * jd_relevance (LLM)
+#     if keyword stuffing is detected: final *= 0.80 (documented 20% penalty)
+#
+# Notes:
+# - Required-skill score: full match = 1 point, partial = 0.5, missing = 0.
+# - Preferred skills are shown for feedback but do NOT change the final
+#   score (counting them too would reward the same skill twice).
+# - A missing category simply scores 0 in its slot. There are no hidden caps.
+#
+# Verdicts: >=80 Strong Match, >=65 Good Match, >=45 Moderate Match, else Low Match.
 
 import re
 
-# Import SKILLS_MAP safely
-try:
-    from skills_map import SKILLS_MAP
-except ImportError:
-    try:
-        from skills_map import skills_list as SKILLS_MAP  # type: ignore
-    except ImportError:
-        SKILLS_MAP = {}
+import rule_matcher
+from skills_map import SKILLS_MAP
 
-# Documented weights (must sum to 1.0).
+# Each weight is a share of the final score. They must add up to 1.0.
 WEIGHTS = {
     "required_skills": 0.35,
     "experience": 0.25,
@@ -44,201 +28,141 @@ WEIGHTS = {
     "jd_relevance": 0.15,
 }
 
-KEYWORD_STUFFING_PENALTY = 0.80  # 20% penalty, applied only when detected.
+KEYWORD_STUFFING_PENALTY = 0.80  # documented 20% penalty, only when detected.
 
 
-def to_text(val) -> str:
-    if val is None:
+def clean(text: str) -> str:
+    """Lowercase and simplify text so skill matching is consistent."""
+    if not text:
         return ""
-    if isinstance(val, list):
-        return " ".join([to_text(item) for item in val if item]).strip()
-    if isinstance(val, dict):
-        return " ".join([to_text(v) for v in val.values() if v]).strip()
-    return str(val).strip()
+    text = re.sub(r"[\(\)\[\]\{\}\/\\]", " ", text.lower().replace("-", " "))
+    return re.sub(r"\s+", " ", text).strip()
 
 
-def clean(t: str) -> str:
-    """Basic text cleaner for scoring module."""
-    if not t:
-        return ""
-    text = re.sub(r'[\(\)\[\]\{\}\/\\]', ' ', t.lower().replace('-', ' '))
-    return re.sub(r'\s+', ' ', text).strip()
-
-
-# ── EXTRACT SKILLS (Required by Router / Parser) ──
 def extract_skills(text: str) -> list:
-    """
-    Extracts canonical skills from raw text using SKILLS_MAP
-    with safe regex boundary matching (deterministic, no embeddings).
+    """Find canonical skills from SKILLS_MAP mentioned in free text.
+
+    Uses word-boundary matching, so 'java' does not match 'javascript'.
     """
     if not text:
         return []
-
     cleaned_text = clean(text)
     found = set()
-
     for canonical, variants in (SKILLS_MAP or {}).items():
-        all_variants = variants + [canonical]
-        for v in all_variants:
-            v_clean = clean(v)
-            if not v_clean:
+        for variant in variants + [canonical]:
+            variant_clean = clean(variant)
+            if not variant_clean:
                 continue
-            # Safe boundary check (avoids 'java' matching 'javascript' etc.
-            # for multi-word variants; single-char skills still need care).
-            pattern = rf'\b{re.escape(v_clean)}\b'
-            if re.search(pattern, cleaned_text):
+            if re.search(rf"\b{re.escape(variant_clean)}\b", cleaned_text):
                 found.add(canonical)
                 break
-
     return list(found)
 
 
-def match_skills(resume_skills: list, jd_req: list, jd_pref: list) -> dict:
-    """Delegates matching to rule_matcher.py (deterministic, no embeddings)."""
-    from rule_matcher import match_skills as rule_match
-    return rule_match(
+def match_skills(resume_skills: list, jd_required: list, jd_preferred: list) -> dict:
+    """Match resume skills against JD lists (deterministic, no embeddings)."""
+    return rule_matcher.match_skills(
         resume_skills=resume_skills,
-        jd_required=jd_req,
-        jd_preferred=jd_pref,
+        jd_required=jd_required,
+        jd_preferred=jd_preferred,
     )
 
 
 def check_keyword_stuffing(resume_json: dict, jd_json: dict) -> float:
+    """Return 0.80 if the resume stuffs JD keywords, else 1.0.
+
+    A bullet counts as stuffed when over 35% of its words are JD skills,
+    and the penalty applies when over 40% of bullets are stuffed.
     """
-    Detects unnatural keyword spamming or list-dumping.
-    Returns a multiplier (1.0 = Clean, 0.80 = Penalty Applied).
-    Deterministic; no embeddings.
-    """
-    bullets = [b for e in (resume_json or {}).get("experience", []) for b in e.get("bullets", [])]
+    bullets = [b for exp in (resume_json or {}).get("experience", []) for b in exp.get("bullets", [])]
     if not bullets:
         return 1.0
-
-    all_jd_skills = [s.lower() for s in (jd_json or {}).get("required_skills", []) + (jd_json or {}).get("preferred_skills", [])]
-    if not all_jd_skills:
+    jd_skills = [s.lower() for s in (jd_json or {}).get("required_skills", [])
+                 + (jd_json or {}).get("preferred_skills", [])]
+    if not jd_skills:
         return 1.0
 
-    stuffed_bullets = 0
+    stuffed = 0
     for bullet in bullets:
         words = bullet.split()
         if len(words) < 6:
             continue
-        # Check skill frequency inside a single bullet
-        skill_hits = sum(1 for s in all_jd_skills if s in bullet.lower())
-        density = skill_hits / len(words)
-
-        # If > 35% of bullet is just comma-separated JD skills -> Spam
-        if density > 0.35:
-            stuffed_bullets += 1
-
-    # If more than 40% of bullets are spammy
-    if (stuffed_bullets / len(bullets)) > 0.40:
-        return KEYWORD_STUFFING_PENALTY  # 20% penalty on total score
-
+        hits = sum(1 for skill in jd_skills if skill in bullet.lower())
+        if hits / len(words) > 0.35:
+            stuffed += 1
+    if stuffed / len(bullets) > 0.40:
+        return KEYWORD_STUFFING_PENALTY
     return 1.0
 
 
-def _category_score(llm_eval, name: str) -> float:
-    """Safely extract 0-100 category score from LLMEvaluation or dict."""
+def _clamp(score) -> float:
+    """Force any value into the 0-100 range. Bad values become 0."""
     try:
-        if llm_eval is None:
-            return 0.0
-        if isinstance(llm_eval, dict):
-            cat = llm_eval.get(name, 0)
-            if isinstance(cat, dict):
-                return float(cat.get("score", 0))
-            return float(cat or 0)
-        cat = getattr(llm_eval, name, 0)
-        if hasattr(cat, "score"):
-            return float(cat.score)
-        return float(cat or 0)
+        return max(0.0, min(100.0, float(score or 0.0)))
     except (TypeError, ValueError):
         return 0.0
 
 
-def compute_weighted_score(skill_res: dict, llm_eval) -> dict:
-    """
-    Pure deterministic weighted aggregation.
+def _category_score(llm_eval, name: str) -> float:
+    """Read one 0-100 category score from an LLMEvaluation (or plain dict)."""
+    if llm_eval is None:
+        return 0.0
+    if isinstance(llm_eval, dict):
+        category = llm_eval.get(name, 0)
+        if isinstance(category, dict):
+            return _clamp(category.get("score", 0))
+        return _clamp(category)
+    category = getattr(llm_eval, name, 0)
+    if hasattr(category, "score"):
+        return _clamp(category.score)
+    return _clamp(category)
 
-    Returns component scores + final_before_penalty for transparency.
-    """
-    req_score = float((skill_res or {}).get("required_score", 0.0) or 0.0)
-    exp_score = _category_score(llm_eval, "experience")
-    proj_score = _category_score(llm_eval, "projects")
-    edu_score = _category_score(llm_eval, "education")
-    rel_score = _category_score(llm_eval, "jd_relevance")
 
-    def clamp(v):
-        return max(0.0, min(100.0, float(v or 0.0)))
-
-    req_score, exp_score, proj_score, edu_score, rel_score = (
-        clamp(req_score), clamp(exp_score), clamp(proj_score), clamp(edu_score), clamp(rel_score)
-    )
-
-    final = (
-        WEIGHTS["required_skills"] * req_score
-        + WEIGHTS["experience"] * exp_score
-        + WEIGHTS["projects"] * proj_score
-        + WEIGHTS["education"] * edu_score
-        + WEIGHTS["jd_relevance"] * rel_score
-    )
-    return {
-        "required_skills": round(req_score, 2),
-        "experience": round(exp_score, 2),
-        "projects": round(proj_score, 2),
-        "education": round(edu_score, 2),
-        "jd_relevance": round(rel_score, 2),
-        "final_before_penalty": round(final, 2),
+def compute_weighted_score(skill_result: dict, llm_eval) -> dict:
+    """Apply the documented formula. Returns each part plus the total."""
+    parts = {
+        "required_skills": _clamp((skill_result or {}).get("required_score", 0.0)),
+        "experience": _category_score(llm_eval, "experience"),
+        "projects": _category_score(llm_eval, "projects"),
+        "education": _category_score(llm_eval, "education"),
+        "jd_relevance": _category_score(llm_eval, "jd_relevance"),
     }
+    total = sum(parts[name] * WEIGHTS[name] for name in parts)
+    result = {name: round(score, 2) for name, score in parts.items()}
+    result["final_before_penalty"] = round(total, 2)
+    return result
 
 
-def final_score(resume_json: dict, skill_res: dict, sem_res: dict = None, jd_json: dict = None, llm_eval=None) -> dict:
-    """
-    Combines deterministic skill match + LLM contextual scores.
+def final_score(resume_json: dict, skill_result: dict, jd_json: dict, llm_eval) -> dict:
+    """Combine everything into the final 0-100 score plus a verdict."""
+    parts = compute_weighted_score(skill_result or {}, llm_eval)
+    total = parts["final_before_penalty"]
 
-    Backwards-compatible signature: old callers passed sem_res (embedding
-    semantic result). sem_res is now IGNORED — kept only so existing imports
-    don't break. New callers should pass llm_eval=LLMEvaluation.
-
-    If llm_eval is None and sem_res looks like an LLM eval dict with
-    experience/projects keys, it is used as llm_eval (migration helper).
-    """
-    # Migration helper: allow passing LLMEvaluation as 3rd positional arg.
-    if llm_eval is None and isinstance(sem_res, dict):
-        if any(k in sem_res for k in ("experience", "projects", "education", "jd_relevance")):
-            llm_eval, sem_res = sem_res, None
-
-    components = compute_weighted_score(skill_res or {}, llm_eval)
-    final = components["final_before_penalty"]
-
-    # ── Documented anti-spam penalty (no hidden caps) ──
     spam_multiplier = 1.0
     if jd_json:
         spam_multiplier = check_keyword_stuffing(resume_json or {}, jd_json)
-        final = final * spam_multiplier
+        total = total * spam_multiplier
+    total = round(max(0.0, min(100.0, total)), 2)
 
-    final = round(max(0.0, min(100.0, final)), 2)
-
-    # Realistic Verdicts
-    if final >= 80.0:
+    if total >= 80.0:
         verdict = "Strong Match"
-    elif final >= 65.0:
+    elif total >= 65.0:
         verdict = "Good Match"
-    elif final >= 45.0:
+    elif total >= 45.0:
         verdict = "Moderate Match"
     else:
         verdict = "Low Match"
 
-    req_score = (skill_res or {}).get("required_score", 0.0)
     return {
-        "final_score": final,
+        "final_score": total,
         "verdict": verdict,
         "breakdown": {
-            "required_skills": components["required_skills"],
-            "experience": components["experience"],
-            "projects": components["projects"],
-            "education": components["education"],
-            "jd_relevance": components["jd_relevance"],
-            "preferred_skills_info_only": (skill_res or {}).get("preferred_score", 0.0),
+            "required_skills": parts["required_skills"],
+            "experience": parts["experience"],
+            "projects": parts["projects"],
+            "education": parts["education"],
+            "jd_relevance": parts["jd_relevance"],
+            "preferred_skills_info_only": (skill_result or {}).get("preferred_score", 0.0),
             "spam_multiplier": spam_multiplier,
             "weights": dict(WEIGHTS),
             "formula": (
@@ -248,22 +172,3 @@ def final_score(resume_json: dict, skill_res: dict, sem_res: dict = None, jd_jso
             ),
         },
     }
-
-
-# ── Deprecated stub: kept to fail loudly if old embedding path is used ──
-def semantic_score(resume_json: dict, jd_json: dict) -> dict:
-    """
-    DEPRECATED: embedding-based semantic scoring was removed.
-
-    Raises to prevent silent use of the old embedding pipeline.
-    Use services.evaluation.async_evaluate_resume instead.
-    """
-    raise RuntimeError(
-        "semantic_score (embedding similarity) was removed. "
-        "Use services.evaluation.async_evaluate_resume for LLM-based evaluation."
-    )
-
-
-def calibrate_similarity(sim: float) -> float:
-    """DEPRECATED: embedding calibration curve removed with embeddings."""
-    raise RuntimeError("calibrate_similarity was removed with the embedding pipeline.")
