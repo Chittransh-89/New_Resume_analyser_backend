@@ -64,14 +64,18 @@ Examples:
 "Free resources to learn Python" → rag_web
 "Best Python courses" → rag_web
 "Best Bollywood movies" → off_topic
+"Can you tell me Bollywood movies?" → off_topic
+"Recommend some Hollywood movies" → off_topic
+"Who won the cricket match?" → off_topic
+"Tell me a joke" → off_topic
 
-Return exactly:
+Return exactly one valid JSON object with these keys:
+- "intent": one of "casual", "rag", "rag_web", "off_topic"
+- "needs_rag": boolean
+- "needs_web": boolean
+- "reason": a short explanation
 
-{
-  "intent": "rag_web",
-  "needs_rag": true,
-  "needs_web": true,
-  "reason": "Current external information"
-}
+Set the booleans consistently with the selected intent.
+Do not treat any example intent as the default.
 
 Keep reason under 8 words.

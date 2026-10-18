@@ -202,26 +202,64 @@ class CareerBuddyBrain:
     def chat(self, user_query, use_web_search=None):
         try:
 
-             # 1. Understand query first
+             
+            # 1. Classify the query first
             route = self.router.classify(user_query)
             print(f"🧭 Router: {route}")
             logger.info("🧭 Router: %s", route)
 
-            should_use_rag = route["needs_rag"]
-            should_search = route["needs_web"]
+            intent = route.get("intent", "off_topic")
 
-            # 2. Legacy intent fallback
-            if not should_search:
+            # 2. Hard stop for off-topic queries.
+            # Neither legacy heuristics nor frontend flags may
+            # trigger retrieval for these queries.
+            if intent == "off_topic":
+                answer = (
+                    "I'm CareerBuddy, focused on career guidance, "
+                    "technology, AI/ML, DSA, projects, and interview "
+                    "preparation. I can't help with general "
+                    "entertainment recommendations."
+                )
+
+                self.chat_history.extend([
+                    {"role": "user", "content": user_query},
+                    {"role": "assistant", "content": answer},
+                ])
+
+                if len(self.chat_history) > Config.MAX_CHAT_HISTORY:
+                    self.chat_history = self.chat_history[
+                        -Config.MAX_CHAT_HISTORY:
+                    ]
+
+                return {
+                    "response": answer,
+                    "used_web_search": False,
+                    "google_links": [],
+                    "youtube_links": [],
+                }
+
+            # 3. Retrieval decisions are restricted to supported intents.
+            should_use_rag = (
+                intent in {"rag", "rag_web"}
+                and route.get("needs_rag", False)
+            )
+            should_search = (
+                intent == "rag_web"
+                and route.get("needs_web", False)
+            )
+
+            # 4. Legacy fallback is allowed only for supported topics.
+            if intent in {"rag", "rag_web"} and not should_search:
                 should_search = self.needs_web_search(user_query)
 
-            # 3. Explicit frontend request can force web search
-            if use_web_search is True:
+            # 5. Frontend may request web search only for supported topics.
+            if use_web_search is True and intent in {"rag", "rag_web"}:
                 should_search = True
 
             print(f"🧭 Final decision → RAG: {should_use_rag}, WEB: {should_search}")
             logger.info("🧭 Final decision → RAG: %s, WEB: %s", should_use_rag, should_search)
 
-            # 2. RAG only when router says YES
+            # 6. Fetch RAG context only when required
             rag_context = ""
 
             if should_use_rag:
@@ -229,7 +267,7 @@ class CareerBuddyBrain:
                 logger.info("🧠 Getting RAG context...")
                 rag_context = self.get_rag_context(user_query)
 
-            # 3. Web only when router says YES
+            # 7. Fetch web context only when required
             web_context = ""
 
             if should_search:
