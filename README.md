@@ -1,13 +1,3 @@
----
-title: New Resume Analyser CareerBuddy
-emoji: 📄
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # 🚀 CareerBuddy AI – AI-Powered Resume Analyzer & Career Assistant
 
 **CareerBuddy AI** is an AI-powered career assistance platform designed to help students and job seekers improve their resumes, identify skill gaps, and make better career decisions.
